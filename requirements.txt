@@ -1,6 +1,6 @@
 # MeowField AutoPiano v1.0.2 依赖包
 # 核心依赖
-tkinter  # Python内置，无需安装
+#tkinter  # Python内置，无需安装
 pillow>=9.0.0  # 图像处理
 ttkbootstrap>=1.10.0  # 现代化主题
 
