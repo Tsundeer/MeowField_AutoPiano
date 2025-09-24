@@ -61,368 +61,208 @@ class DrumsPage(BasePage):
 
     def mount(self, left: ttk.Frame, right: ttk.Frame):
         """挂载架子鼓页面"""
-        # 直接使用传入的left框架，与其他乐器页面保持一致
-        content = ttk.Frame(left)
-        content.pack(fill=tk.BOTH, expand=True)
-        
-        # 创建滚动容器
-        canvas = tk.Canvas(content, highlightthickness=0, bg='white')
-        scrollbar = ttk.Scrollbar(content, orient=tk.VERTICAL, command=canvas.yview)
-        scrollable_frame = ttk.Frame(canvas)
-        
-        # 配置滚动
-        scrollable_frame.bind(
-            "<Configure>",
-            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
-        )
-        
-        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
-        canvas.configure(yscrollcommand=scrollbar.set)
-        
-        # 配置自适应宽度，避免被右侧演奏列表遮挡
-        def _on_canvas_configure(event):
-            # 自适应宽度：减去右侧演奏列表的宽度（200px + 边距）
-            canvas_width = event.width - 220  # 200px演奏列表 + 20px边距
-            canvas.itemconfig(canvas.find_all()[0], width=canvas_width)
-        
-        canvas.bind("<Configure>", _on_canvas_configure)
-        
-        # 布局滚动容器
-        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        
-        # 绑定鼠标滚轮事件
-        def _bind_to_mousewheel(event):
-            canvas.bind_all("<MouseWheel>", lambda e: canvas.yview_scroll(int(-1*(e.delta/120)), "units"))
-        
-        def _unbind_from_mousewheel(event):
-            canvas.unbind_all("<MouseWheel>")
-        
-        canvas.bind('<Enter>', _bind_to_mousewheel)
-        canvas.bind('<Leave>', _unbind_from_mousewheel)
-        
-        # 主容器（在滚动框架内）
-        main_frame = ttk.Frame(scrollable_frame)
-        main_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
-        
-        # 文件选择区域
-        self._create_file_section(main_frame)
-        
-        # 分部解析区域
-        self._create_partition_section(main_frame)
-        
-        # 播放控制区域
-        self._create_control_section(main_frame)
-        
-        # 定时和对时功能区域
-        self._create_timing_section(main_frame)
-        
-        # 播放列表区域已移除，使用右侧演奏列表
+        # 与其他乐器页面保持一致，使用统一的播放控制组件
+        try:
+            # 关键：避免在同一容器既 pack 又 grid —— 创建子容器供组件使用（组件内部可使用 grid）
+            content = ttk.Frame(left)
+            content.pack(fill=tk.BOTH, expand=True)
+            
+            # 使用统一的播放控制组件，与其他乐器页面保持一致
+            include_ensemble = False  # 架子鼓不需要合奏模式
+            if self.app_ref:
+                self.app_ref._create_playback_control_component(content, include_ensemble=include_ensemble, instrument='架子鼓')
+            else:
+                self._log_message("app_ref 不可用，无法使用统一播放控制组件", "ERROR")
+            
+            # 在统一组件基础上，添加架子鼓专属的分部解析功能
+            self._create_drums_partition_section(content)
+            
+        except Exception as e:
+            self._log_message(f"架子鼓页面挂载失败: {e}", "ERROR")
+            import traceback
+            traceback.print_exc()
         
         # 右侧已移除，与其他乐器页面保持一致
         self._mounted = True
 
+        # 向 DrumsController 注入 app_ref，便于其通过 event_bus 发布播放事件
+        try:
+            if hasattr(self.controller, 'set_app_ref'):
+                self.controller.set_app_ref(self.app_ref)
+                print("[DEBUG] 架子鼓页面：已向 DrumsController 注入 app_ref")
+        except Exception as e:
+            print(f"[DEBUG] 架子鼓页面：注入 app_ref 到 DrumsController 失败: {e}")
+
+        # 订阅播放事件，联动操作栏按钮
+        try:
+            self._bind_playback_events()
+        except Exception as e:
+            print(f"[DEBUG] 架子鼓页面：绑定播放事件失败: {e}")
+
     def unmount(self):
         """卸载页面"""
         self._mounted = False
-
-
-    def _create_file_section(self, parent):
-        """创建文件选择区域"""
-        file_frame = ttk.LabelFrame(parent, text="MIDI文件选择", padding="10")
-        file_frame.pack(fill=tk.X, pady=(0, 5))
-        
-        # 文件路径
-        path_frame = ttk.Frame(file_frame)
-        path_frame.pack(fill=tk.X)
-        
-        # 将midi_path_var定义在app_ref上，以便播放服务能够访问
-        if self.app_ref:
-            self.app_ref.midi_path_var = tk.StringVar(value="")
-        else:
-            self.midi_path_var = tk.StringVar(value="")
-        
-        midi_path_var = self.app_ref.midi_path_var if self.app_ref else self.midi_path_var
-        ttk.Label(path_frame, text="文件:").pack(side=tk.LEFT)
-        path_entry = ttk.Entry(path_frame, textvariable=midi_path_var, width=40)
-        path_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(5, 5))
-        
-        browse_btn = ttk.Button(path_frame, text="浏览", command=self._browse_file,
-                               style='MF.Primary.TButton')
-        browse_btn.pack(side=tk.RIGHT)
-        
-        # 速度控制
-        tempo_frame = ttk.Frame(file_frame)
-        tempo_frame.pack(fill=tk.X, pady=(5, 0))
-        
-        # 将tempo_var定义在app_ref上，以便播放控制器能够访问
-        if self.app_ref:
-            self.app_ref.tempo_var = tk.DoubleVar(value=1.0)
-        else:
-            self.tempo_var = tk.DoubleVar(value=1.0)
-        
-        tempo_var = self.app_ref.tempo_var if self.app_ref else self.tempo_var
-        ttk.Label(tempo_frame, text="速度倍率:").pack(side=tk.LEFT)
-        tempo_spin = ttk.Spinbox(tempo_frame, from_=0.1, to=3.0, increment=0.1,
-                                textvariable=tempo_var, width=10)
-        tempo_spin.pack(side=tk.LEFT, padx=(5, 0))
-
-    def _create_partition_section(self, parent):
-        """创建分部解析区域"""
-        partition_frame = ttk.LabelFrame(parent, text="分部解析", padding="10")
-        partition_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 5))
-        
-        # 按钮区域
-        btn_frame = ttk.Frame(partition_frame)
-        btn_frame.pack(fill=tk.X, pady=(0, 5))
-        
-        ttk.Button(btn_frame, text="识别分部", command=self._identify_partitions,
-                  style='MF.Secondary.TButton').pack(side=tk.LEFT, padx=(0, 5))
-        ttk.Button(btn_frame, text="全选", command=self._select_all_partitions,
-                  style='MF.Secondary.TButton').pack(side=tk.LEFT, padx=(0, 5))
-        ttk.Button(btn_frame, text="应用解析", command=self._apply_analysis,
-                  style='MF.Primary.TButton').pack(side=tk.LEFT)
-        
-        # 分部列表
-        list_frame = ttk.Frame(partition_frame)
-        list_frame.pack(fill=tk.BOTH, expand=True)
-        
-        self.partition_listbox = tk.Listbox(list_frame, selectmode=tk.MULTIPLE, height=6)
-        partition_scroll = ttk.Scrollbar(list_frame, orient=tk.VERTICAL, 
-                                       command=self.partition_listbox.yview)
-        self.partition_listbox.configure(yscrollcommand=partition_scroll.set)
-        
-        self.partition_listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        partition_scroll.pack(side=tk.RIGHT, fill=tk.Y)
-
-    def _create_control_section(self, parent):
-        """创建播放控制区域"""
-        control_frame = ttk.LabelFrame(parent, text="操作", padding="15")
-        control_frame.pack(fill=tk.X, pady=(0, 10))
-        
-        # 创建居中容器
-        control_center = ttk.Frame(control_frame)
-        control_center.pack(expand=True, fill=tk.X)
-        
-        # 主要演奏控制按钮（大按钮，突出显示）
-        main_buttons_row = ttk.Frame(control_center)
-        main_buttons_row.pack(side=tk.TOP, pady=(0, 8))
-        
-        # 演奏控制按钮（合并开始/停止演奏）
-        def _toggle_auto_play():
-            try:
-                if hasattr(self, 'btn_play'):
-                    current_text = self.btn_play.cget("text")
-                    if current_text == "开始演奏":
-                        self._start_play()
-                    elif current_text == "停止演奏":
-                        self._stop_play()
-            except Exception as e:
-                self._log_message(f"切换演奏状态失败: {e}", "ERROR")
-        
-        self.btn_play = ttk.Button(main_buttons_row, text="开始演奏", 
-                                  command=_toggle_auto_play, width=14, style='MF.Success.TButton')
-        self.btn_play.pack(side=tk.LEFT, padx=(0, 12))
-        
-        # 暂停/恢复按钮
-        self.btn_pause = ttk.Button(main_buttons_row, text="暂停", 
-                                   command=self._pause_play, width=10, state="disabled", style='MF.Warning.TButton')
-        self.btn_pause.pack(side=tk.LEFT, padx=(0, 12))
-        
-        # 倒计时显示标签
-        self.countdown_label = ttk.Label(main_buttons_row, text="", foreground="#FF6B35")
-        self.countdown_label.pack(side=tk.LEFT, padx=(12, 0))
-
-        # 倒计时设置（在主要按钮下方）
-        countdown_row = ttk.Frame(control_center)
-        countdown_row.pack(side=tk.TOP, pady=(8, 8))
-        
-        ttk.Label(countdown_row, text="开始前倒计时:").pack(side=tk.LEFT, padx=(0, 6))
-        self.enable_countdown_var = tk.BooleanVar(value=True)
-        ttk.Checkbutton(countdown_row, variable=self.enable_countdown_var).pack(side=tk.LEFT, padx=(0, 6))
-        self.countdown_seconds_var = tk.IntVar(value=3)
-        ttk.Spinbox(countdown_row, from_=0, to=30, increment=1, width=6, textvariable=self.countdown_seconds_var).pack(side=tk.LEFT, padx=(0, 6))
-        ttk.Label(countdown_row, text="秒").pack(side=tk.LEFT, padx=(0, 0))
-        
-        # MIDI音频播放按钮行（合并播放/停止音频）
-        midi_buttons_row = ttk.Frame(control_center)
-        midi_buttons_row.pack(side=tk.TOP, pady=(8, 8))
-        
-        def _toggle_midi_playback():
-            try:
-                if hasattr(self, 'midi_play_button'):
-                    current_text = self.midi_play_button.cget("text")
-                    if current_text == "播放MIDI音频":
-                        self._play_midi()
-                        # 更新按钮状态
-                        self.midi_play_button.configure(text="停止音频", style='MF.Danger.TButton')
-                    elif current_text == "停止音频":
-                        self._stop_playback()
-                        # 更新按钮状态
-                        self.midi_play_button.configure(text="播放MIDI音频", style='MF.Info.TButton')
-            except Exception as e:
-                self._log_message(f"切换MIDI播放状态失败: {e}", "ERROR")
-        
-        self.midi_play_button = ttk.Button(midi_buttons_row, text="播放MIDI音频", 
-                                          command=_toggle_midi_playback, style='MF.Info.TButton')
-        self.midi_play_button.pack(side=tk.LEFT, padx=(0, 0))
-        
-        # 快捷键提示
-        hint = ttk.Label(control_center, text="快捷键: Ctrl+Shift+C=停止所有播放", foreground="#666")
-        hint.pack(side=tk.TOP, pady=(8, 0), anchor=tk.W)
-        
-        # 键位说明
-        keymap_frame = ttk.Frame(control_frame)
-        keymap_frame.pack(fill=tk.X, pady=(10, 0))
-        
-        ttk.Label(keymap_frame, text="架子鼓键位映射:", font=("Segoe UI", 9, "bold")).pack(anchor=tk.W)
-        
-        keymap_text = """1-踩镲闭  Q-踩镲开  2-高音吊镲  3-一嗵鼓  4-二嗵鼓  5-叮叮镲
-T-中音吊镲  W-军鼓  E-底鼓  R-落地嗵鼓"""
-        
-        ttk.Label(keymap_frame, text=keymap_text, font=("Consolas", 8), 
-                 foreground="#666666").pack(anchor=tk.W, padx=(10, 0))
-
-    def _create_timing_section(self, parent):
-        """创建定时和对时功能区域"""
-        timing_frame = ttk.LabelFrame(parent, text="定时触发（单次·NTP对时+延迟/补偿）", padding="10")
-        timing_frame.pack(fill=tk.X, pady=(0, 5))
-        
-        # 时间输入：HH:MM:SS.mmm
-        ttk.Label(timing_frame, text="目标时间(24h):").grid(row=0, column=0, sticky=tk.W)
-        # 将时间变量定义在app_ref上，以便播放控制器能够访问
-        if self.app_ref:
-            self.app_ref.timing_hh_var = tk.IntVar(value=17)
-            self.app_ref.timing_mm_var = tk.IntVar(value=0)
-            self.app_ref.timing_ss_var = tk.IntVar(value=0)
-            self.app_ref.timing_ms_var = tk.IntVar(value=0)
-        else:
-            # 备用方案：如果app_ref不可用，仍然定义在self上
-            self.timing_hh_var = tk.IntVar(value=17)
-            self.timing_mm_var = tk.IntVar(value=0)
-            self.timing_ss_var = tk.IntVar(value=0)
-            self.timing_ms_var = tk.IntVar(value=0)
-        # 使用正确的变量引用
-        hh_var = self.app_ref.timing_hh_var if self.app_ref else self.timing_hh_var
-        mm_var = self.app_ref.timing_mm_var if self.app_ref else self.timing_mm_var
-        ss_var = self.app_ref.timing_ss_var if self.app_ref else self.timing_ss_var
-        ms_var = self.app_ref.timing_ms_var if self.app_ref else self.timing_ms_var
-        
-        ttk.Spinbox(timing_frame, from_=0, to=23, width=4, textvariable=hh_var).grid(row=0, column=1, sticky=tk.W)
-        ttk.Label(timing_frame, text=":").grid(row=0, column=2, sticky=tk.W)
-        ttk.Spinbox(timing_frame, from_=0, to=59, width=4, textvariable=mm_var).grid(row=0, column=3, sticky=tk.W)
-        ttk.Label(timing_frame, text=":").grid(row=0, column=4, sticky=tk.W)
-        ttk.Spinbox(timing_frame, from_=0, to=59, width=4, textvariable=ss_var).grid(row=0, column=5, sticky=tk.W)
-        ttk.Label(timing_frame, text=".").grid(row=0, column=6, sticky=tk.W)
-        ttk.Spinbox(timing_frame, from_=0, to=999, width=6, textvariable=ms_var).grid(row=0, column=7, sticky=tk.W)
-
-        # 对时控制（执行后刷新状态）
-        def _btn_enable_net():
-            self._timing_enable_network_clock()
-            self._refresh_timing_status(delay_ms=50)
-        ttk.Button(timing_frame, text="启用公网对时", command=_btn_enable_net, style='MF.Success.TButton').grid(row=1, column=0, sticky=tk.W, pady=(6,0))
-
-        # NTP 服务器选择/关闭
-        ttk.Label(timing_frame, text="NTP服务器(逗号分隔):").grid(row=4, column=0, sticky=tk.W, pady=(6,0))
         try:
-            default_servers = "ntp.ntsc.ac.cn,time1.cloud.tencent.com,time2.cloud.tencent.com"
-            self.timing_servers_var = tk.StringVar(value=default_servers)
+            self._unbind_playback_events()
         except Exception:
             pass
-        server_entry = ttk.Entry(timing_frame, textvariable=self.timing_servers_var, width=48)
-        server_entry.grid(row=4, column=1, columnspan=4, sticky=tk.W+tk.E, padx=(6,0), pady=(6,0))
-        def _apply_servers():
-            self._timing_apply_servers()
-            self._refresh_timing_status(delay_ms=100)
-        ttk.Button(timing_frame, text="应用服务器", command=_apply_servers, style='MF.Info.TButton').grid(row=4, column=5, sticky=tk.W, padx=(6,0), pady=(6,0))
-        self.ntp_enabled_var = tk.BooleanVar(value=True)
-        def _toggle_ntp():
-            self._timing_toggle_ntp(self.ntp_enabled_var.get())
-            self._refresh_timing_status(delay_ms=100)
-        ttk.Checkbutton(timing_frame, text="启用NTP", variable=self.ntp_enabled_var, command=_toggle_ntp).grid(row=4, column=6, sticky=tk.W, padx=(12,0), pady=(6,0))
 
-        # 对时参数：间隔与重排阈值
-        ttk.Label(timing_frame, text="对时间隔(s):").grid(row=5, column=0, sticky=tk.W, pady=(6,0))
-        self.timing_resync_interval_var = tk.DoubleVar(value=1.0)
-        ttk.Spinbox(timing_frame, from_=0.2, to=10.0, increment=0.2, width=8, textvariable=self.timing_resync_interval_var).grid(row=5, column=1, sticky=tk.W, padx=(6,0), pady=(6,0))
-        ttk.Label(timing_frame, text="重排阈值(ms):").grid(row=5, column=2, sticky=tk.W, pady=(6,0))
-        self.timing_adjust_threshold_var = tk.DoubleVar(value=5.0)
-        ttk.Spinbox(timing_frame, from_=1.0, to=1000.0, increment=1.0, width=10, textvariable=self.timing_adjust_threshold_var).grid(row=5, column=3, sticky=tk.W, pady=(6,0))
-        def _apply_resync_params():
-            try:
-                interval = float(self.timing_resync_interval_var.get())
-            except Exception:
-                interval = None
-            try:
-                thr = float(self.timing_adjust_threshold_var.get())
-            except Exception:
-                thr = None
-            self._timing_set_resync_settings(interval, thr)
-            self._refresh_timing_status(delay_ms=100)
-        ttk.Button(timing_frame, text="应用对时参数", command=_apply_resync_params, style='MF.Warning.TButton').grid(row=5, column=4, sticky=tk.W, padx=(6,0), pady=(6,0))
 
-        # 手动补偿与状态
-        ttk.Label(timing_frame, text="手动补偿(ms):").grid(row=2, column=0, sticky=tk.W, pady=(6,0))
-        # 将手动补偿变量也定义在app_ref上
-        if self.app_ref:
-            self.app_ref.timing_manual_ms_var = tk.IntVar(value=0)
-        else:
-            self.timing_manual_ms_var = tk.IntVar(value=0)
-        
-        manual_var = self.app_ref.timing_manual_ms_var if self.app_ref else self.timing_manual_ms_var
-        ttk.Spinbox(timing_frame, from_=-2000, to=2000, increment=1, width=8, textvariable=manual_var).grid(row=2, column=1, sticky=tk.W, padx=(6,0), pady=(6,0))
-        self.timing_status_var = tk.StringVar(value="状态: 未对时")
-        ttk.Label(timing_frame, textvariable=self.timing_status_var, foreground="#666").grid(row=2, column=2, columnspan=6, sticky=tk.W, padx=(12,0), pady=(6,0))
+    # 文件选择功能已由统一播放控制组件提供，不再需要独立实现
 
-        # 操作按钮（合并创建/取消计划按钮）
-        def _toggle_schedule():
-            try:
-                if hasattr(self, 'schedule_button'):
-                    current_text = self.schedule_button.cget("text")
-                    if current_text == "创建计划":
-                        self._timing_schedule_for_current_instrument()
-                        # 延迟更新按钮状态，等待计划创建完成
-                        self.app_ref.root.after(100, lambda: self._update_schedule_button_state()) if self.app_ref else None
-                    elif current_text == "取消计划":
-                        self._timing_cancel_schedule()
-                        # 延迟更新按钮状态，等待计划取消完成
-                        self.app_ref.root.after(100, lambda: self._update_schedule_button_state()) if self.app_ref else None
-                    # 计划操作后立即刷新一次
-                    self._refresh_timing_status(delay_ms=100)
-            except Exception as e:
-                self._log_message(f"切换计划状态失败: {e}", "ERROR")
+    def _create_drums_partition_section(self, parent):
+        """创建架子鼓专属的分部解析区域"""
+        # 在统一组件的基础上，添加架子鼓专属的分部解析功能
+        # 这个区域会在统一组件的控制分页中添加
+        # 架子鼓的分部解析功能可以通过统一组件的解析设置分页来访问
+        pass
+
+    # 播放控制功能已由统一播放控制组件提供，不再需要独立实现
+
+    # 定时功能已由统一播放控制组件提供，不再需要独立实现
+    
+    def _create_timing_section(self, parent):
+        """创建定时触发控制组件（鼓专用：定时回调走 DrumsController）"""
+        timing_frame = ttk.LabelFrame(parent, text="定时触发（NTP对时·架子鼓）", padding="10")
+        timing_frame.pack(fill=tk.X, pady=(6, 0))
         
-        def _btn_test_now():
-            self._timing_test_now()
-            self._refresh_timing_status(delay_ms=50)
-        
-        self.schedule_button = ttk.Button(timing_frame, text="创建计划", command=_toggle_schedule, style='MF.Success.TButton')
-        self.schedule_button.grid(row=3, column=0, sticky=tk.W, pady=(8,0))
-        ttk.Button(timing_frame, text="立即按计划测试一次", command=_btn_test_now, style='MF.Info.TButton').grid(row=3, column=1, sticky=tk.W, padx=(6,0), pady=(8,0))
-        for c in range(8):
+        try:
+            # 简化的定时控制组件创建
+            from pages.components import timing_controls
+            
+            # 定时播放回调：复用主控制栏“开始演奏”入口，按钮联动由统一组件处理
+            def drums_play_callback():
+                """架子鼓定时播放回调：返回bool表示是否成功"""
+                try:
+                    # 设置当前乐器
+                    if hasattr(self.app_ref, 'current_instrument'):
+                        self.app_ref.current_instrument = '架子鼓'
+
+                    # 选取要播放的文件路径：播放列表当前项 -> 页面当前文件 -> app当前文件
+                    path = None
+                    try:
+                        pm = getattr(self.app_ref, 'playlist_manager', None)
+                        if pm and hasattr(pm, 'get_current_path'):
+                            path = pm.get_current_path()
+                    except Exception:
+                        path = None
+                    if not path:
+                        path = getattr(self, 'current_midi_file', '') or getattr(self.app_ref, 'current_midi_path', '')
+                    if not path:
+                        self._log_message("定时触发失败：未找到可播放的MIDI文件", "ERROR")
+                        return False
+
+                    # 同步到 app_ref，复用统一开始入口
+                    try:
+                        self.app_ref.current_midi_path = path
+                    except Exception:
+                        pass
+
+                    # 关键：设置统一入口使用的 midi_path_var，避免去查找 app 自己的播放列表
+                    try:
+                        if hasattr(self.app_ref, 'midi_path_var') and self.app_ref.midi_path_var is not None:
+                            self.app_ref.midi_path_var.set(path)
+                    except Exception:
+                        pass
+
+                    # 同步倍速到 app_ref（如有）
+                    try:
+                        if hasattr(self.app_ref, 'tempo_var') and self.app_ref.tempo_var is not None and self.tempo_var is not None:
+                            self.app_ref.tempo_var.set(self.tempo_var.get())
+                    except Exception:
+                        pass
+
+                    # 复用主控制栏“开始演奏”入口（会自动联动按钮为 暂停/停止）
+                    if hasattr(self.app_ref, '_start_auto_play'):
+                        try:
+                            # 确保在主线程执行，以便安全更新Tk控件
+                            if hasattr(self.app_ref, 'root') and getattr(self.app_ref, 'root') is not None:
+                                self.app_ref.root.after(0, self.app_ref._start_auto_play)
+                            else:
+                                # 兜底直接调用（某些测试环境无root）
+                                self.app_ref._start_auto_play()
+                        except Exception:
+                            # 兜底直接调用
+                            try:
+                                self.app_ref._start_auto_play()
+                            except Exception:
+                                self._log_message("调用 _start_auto_play 失败", "ERROR")
+                                return False
+                        return True
+                    else:
+                        self._log_message("应用入口不可用：_start_auto_play 缺失", "ERROR")
+                        return False
+                except Exception as e:
+                    print(f"[DEBUG] 架子鼓定时播放失败: {e}")
+                    return False
+
+            timing_controls.create_timing_controls(
+                parent=timing_frame,
+                app_ref=self.app_ref,
+                controller_ref=self.controller,
+                instrument_name="架子鼓",
+                play_callback=drums_play_callback
+            )
+        except Exception as e:
+            ttk.Label(timing_frame, text=f"定时控制组件加载失败: {e}", foreground="red").pack()
+
+    # ===== 播放事件绑定：驱动按钮联动 =====
+    def _bind_playback_events(self):
+        self._evt_tokens = getattr(self, '_evt_tokens', [])
+        bus = getattr(self.app_ref, 'event_bus', None)
+        if not bus:
+            return
+        def on_start(_):
             try:
-                timing_frame.grid_columnconfigure(c, weight=1)
+                self._update_button_states(playing=True)
             except Exception:
                 pass
+        def on_stop(_):
+            try:
+                self._update_button_states(playing=False)
+            except Exception:
+                pass
+        def on_pause(_):
+            # 暂停时按钮一般切换为“恢复/停止”，此处保持 playing=True（由上层按钮自身文案处理）
+            try:
+                self._update_button_states(playing=True)
+            except Exception:
+                pass
+        def on_resume(_):
+            try:
+                self._update_button_states(playing=True)
+            except Exception:
+                pass
+        def on_complete(_):
+            try:
+                self._update_button_states(playing=False)
+            except Exception:
+                pass
+        try:
+            self._evt_tokens.append(bus.subscribe(getattr(self.app_ref.Events if hasattr(self.app_ref, 'Events') else __import__('app').event_bus, 'Events').PLAYBACK_START, on_start))
+        except Exception:
+            self._evt_tokens.append(bus.subscribe('playback.start', on_start))
+        try:
+            self._evt_tokens.append(bus.subscribe('playback.stop', on_stop))
+            self._evt_tokens.append(bus.subscribe('playback.pause', on_pause))
+            self._evt_tokens.append(bus.subscribe('playback.resume', on_resume))
+            self._evt_tokens.append(bus.subscribe('playback.complete', on_complete))
+        except Exception:
+            pass
 
-        # 首次进入时刷新一次，并开启定时刷新
-        self._refresh_timing_status(delay_ms=10)
-        # 页面初始化时禁用自动对时，避免程序启动时触发对时
-        # def _bootstrap_timing():
-        #     try:
-        #         if self.ntp_enabled_var.get():
-        #             _apply_servers()
-        #             _apply_resync_params()
-        #     except Exception:
-        #         pass
-        # try:
-        #     if hasattr(self, 'app_ref') and self.app_ref and hasattr(self.app_ref, 'root'):
-        #         self.app_ref.root.after(50, _bootstrap_timing)
-        #     else:
-        #         _bootstrap_timing()
-        # except Exception:
-        #     _bootstrap_timing()
-        # 循环将在 _do 中自行重排 next after
+    def _unbind_playback_events(self):
+        bus = getattr(self.app_ref, 'event_bus', None)
+        tokens = getattr(self, '_evt_tokens', [])
+        if not bus or not tokens:
+            return
+        try:
+            for t in tokens:
+                try:
+                    bus.unsubscribe(t)
+                except Exception:
+                    pass
+        finally:
+            self._evt_tokens = []
 
     def _create_playlist_section(self, parent):
         """创建播放列表区域"""
@@ -757,14 +597,20 @@ T-中音吊镲  W-军鼓  E-底鼓  R-落地嗵鼓"""
             return
             
         if playing and not paused:
-            self.btn_play.configure(text="停止演奏", state=tk.NORMAL, style='MF.Danger.TButton')
+            self.btn_play.configure(text="开始演奏", state=tk.NORMAL, style='MF.Success.TButton')
             self.btn_pause.configure(text="暂停", state=tk.NORMAL, style='MF.Warning.TButton')
+            if hasattr(self, 'btn_stop'):
+                self.btn_stop.configure(state=tk.NORMAL)
         elif paused:
-            self.btn_play.configure(text="停止演奏", state=tk.NORMAL, style='MF.Danger.TButton')
+            self.btn_play.configure(text="开始演奏", state=tk.NORMAL, style='MF.Success.TButton')
             self.btn_pause.configure(text="恢复", state=tk.NORMAL, style='MF.Success.TButton')
+            if hasattr(self, 'btn_stop'):
+                self.btn_stop.configure(state=tk.NORMAL)
         else:
             self.btn_play.configure(text="开始演奏", state=tk.NORMAL, style='MF.Success.TButton')
             self.btn_pause.configure(text="暂停", state=tk.DISABLED, style='MF.Warning.TButton')
+            if hasattr(self, 'btn_stop'):
+                self.btn_stop.configure(state=tk.DISABLED)
 
     def _add_to_playlist(self, file_path):
         """添加文件到播放列表"""
@@ -1122,17 +968,35 @@ T-中音吊镲  W-军鼓  E-底鼓  R-落地嗵鼓"""
                 self._log_message("请先选择MIDI文件", "WARNING")
                 return
             
-            if not self.app_ref:
-                self._log_message("应用引用不可用", "ERROR")
-                return
-            if not hasattr(self.app_ref, 'playback_controller'):
-                self._log_message("播放控制器不可用", "ERROR")
-                return
-            if not self.app_ref.playback_controller:
-                self._log_message("播放控制器未初始化", "ERROR")
-                return
-                
-            # 通过播放控制器调用定时功能
+            # 确保存在 playback_controller（供对时桥接使用）
+            try:
+                if not hasattr(self.controller, 'playback_controller') or getattr(self.controller, 'playback_controller', None) is None:
+                    # 尝试从 app_ref 借用
+                    if hasattr(self.app_ref, 'playback_controller') and getattr(self.app_ref, 'playback_controller', None):
+                        setattr(self.controller, 'playback_controller', getattr(self.app_ref, 'playback_controller'))
+                        print(f"[DEBUG] 架子鼓页面：从 app_ref 借用 playback_controller")
+                    else:
+                        # 兜底：尝试构造一个
+                        try:
+                            from meowauto.app.controllers.playback_controller import PlaybackController
+                            pc = PlaybackController(self.app_ref or self.controller, getattr(self.app_ref or self.controller, 'playback_service', None))
+                            setattr(self.controller, 'playback_controller', pc)
+                            print(f"[DEBUG] 架子鼓页面：构造新的 playback_controller")
+                        except Exception as e:
+                            print(f"[DEBUG] 架子鼓页面：构造 playback_controller 失败: {e}")
+                else:
+                    print(f"[DEBUG] 架子鼓页面：playback_controller 已存在")
+            except Exception as e:
+                print(f"[DEBUG] 架子鼓页面：playback_controller 初始化异常: {e}")
+
+            # 向 DrumsController 注入 app_ref，便于其通过 event_bus 发布播放事件
+            try:
+                if hasattr(self.controller, 'set_app_ref'):
+                    self.controller.set_app_ref(self.app_ref)
+                    print("[DEBUG] 架子鼓页面：已向 DrumsController 注入 app_ref")
+            except Exception as e:
+                print(f"[DEBUG] 架子鼓页面：注入 app_ref 到 DrumsController 失败: {e}")
+
             self.app_ref.playback_controller._timing_test_now()
             self._log_message("立即测试播放请求已发送", "INFO")
         except Exception as e:

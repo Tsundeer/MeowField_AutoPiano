@@ -674,7 +674,7 @@ def create_playback_controls(controller, parent_left, include_ensemble: bool = T
                             controller._log_message("加载文件到架子鼓页面失败", "ERROR")
                     else:
                         # 其他页面：使用通用的加载方法
-                        controller.playback_mode.set("midi")
+                        # controller.playback_mode.set("midi")  # 变量不存在，已注释
                         
                         # 解析MIDI文件
                         try:
@@ -783,6 +783,78 @@ def create_playback_controls(controller, parent_left, include_ensemble: bool = T
         # 快捷键提示
         hint = ttk.Label(control_center, text="快捷键: Ctrl+Shift+C=停止所有播放", foreground="#666")
         hint.pack(side=tk.TOP, pady=(8, 0), anchor=tk.W)
+        
+        # ===== 全局播放事件订阅：自动刷新按钮状态 =====
+        try:
+            bus = getattr(controller, 'event_bus', None)
+            if bus:
+                controller._playback_evt_tokens = getattr(controller, '_playback_evt_tokens', [])
+
+                def _ui_apply(fn):
+                    try:
+                        if hasattr(controller, 'root') and controller.root:
+                            controller.root.after(0, fn)
+                        else:
+                            fn()
+                    except Exception:
+                        pass
+
+                def _on_started(_payload=None):
+                    def _apply():
+                        try:
+                            if hasattr(controller, 'auto_play_button'):
+                                controller.auto_play_button.configure(text="停止演奏", command=getattr(controller, '_stop_auto_play', lambda: None))
+                            if hasattr(controller, 'pause_button'):
+                                controller.pause_button.configure(text="暂停", state="normal")
+                        except Exception:
+                            pass
+                    _ui_apply(_apply)
+
+                def _on_stopped(_payload=None):
+                    def _apply():
+                        try:
+                            if hasattr(controller, 'auto_play_button'):
+                                controller.auto_play_button.configure(text="开始演奏", command=getattr(controller, '_start_auto_play', lambda: None))
+                            if hasattr(controller, 'pause_button'):
+                                controller.pause_button.configure(text="暂停", state="disabled")
+                        except Exception:
+                            pass
+                    _ui_apply(_apply)
+
+                def _on_paused(_payload=None):
+                    def _apply():
+                        try:
+                            if hasattr(controller, 'pause_button'):
+                                controller.pause_button.configure(text="恢复", state="normal")
+                        except Exception:
+                            pass
+                    _ui_apply(_apply)
+
+                def _on_resumed(_payload=None):
+                    def _apply():
+                        try:
+                            if hasattr(controller, 'pause_button'):
+                                controller.pause_button.configure(text="暂停", state="normal")
+                        except Exception:
+                            pass
+                    _ui_apply(_apply)
+
+                def _on_complete(_payload=None):
+                    _on_stopped(_payload)
+
+                try:
+                    controller._playback_evt_tokens.append(bus.subscribe('playback.start', _on_started))
+                except Exception:
+                    pass
+                try:
+                    controller._playback_evt_tokens.append(bus.subscribe('playback.stop', _on_stopped))
+                    controller._playback_evt_tokens.append(bus.subscribe('playback.pause', _on_paused))
+                    controller._playback_evt_tokens.append(bus.subscribe('playback.resume', _on_resumed))
+                    controller._playback_evt_tokens.append(bus.subscribe('playback.complete', _on_complete))
+                except Exception:
+                    pass
+        except Exception:
+            pass
         
     except Exception as e:
         try:
