@@ -187,7 +187,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
             _midi = midi;
             TimelineNotes = midi.Notes;
             _completionHandled = false;
-            SelectedQueueItem = Queue.FirstOrDefault(item => string.Equals(item.Path, path, StringComparison.OrdinalIgnoreCase)) ?? SelectedQueueItem;
+            EnsureQueueItem(path, Path.GetFileNameWithoutExtension(path));
             RaiseQueueState();
             _playback.Load(midi, config);
             FileName = Path.GetFileNameWithoutExtension(path);

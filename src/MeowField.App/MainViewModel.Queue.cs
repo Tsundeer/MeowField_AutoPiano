@@ -59,12 +59,27 @@ public partial class MainViewModel
 
     private void AddToQueue(LibraryEntry entry)
     {
-        if (Queue.Any(item => string.Equals(item.Path, entry.Path, StringComparison.OrdinalIgnoreCase))) return;
-        var item = new PlaylistItem(entry.Id, entry.Path, entry.Name, DateTimeOffset.UtcNow);
+        EnsureQueueItem(entry.Path, entry.Name, entry.Id);
+    }
+
+    private bool EnsureQueueItem(string path, string? name = null, string? id = null)
+    {
+        var normalizedPath = Path.GetFullPath(path);
+        var existing = Queue.FirstOrDefault(item => string.Equals(item.Path, normalizedPath, StringComparison.OrdinalIgnoreCase));
+        if (existing is not null)
+        {
+            SelectedQueueItem = existing;
+            return false;
+        }
+
+        var item = new PlaylistItem(id ?? Guid.NewGuid().ToString("N"), normalizedPath,
+            string.IsNullOrWhiteSpace(name) ? Path.GetFileNameWithoutExtension(normalizedPath) : name,
+            DateTimeOffset.UtcNow);
         Queue.Add(item);
-        SelectedQueueItem ??= item;
+        SelectedQueueItem = item;
         RaiseQueueState();
         _ = _store.SavePlaylistAsync(Queue);
+        return true;
     }
 
     private void RaiseQueueState()
