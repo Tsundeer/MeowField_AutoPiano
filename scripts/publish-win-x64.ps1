@@ -70,9 +70,6 @@ if (-not $SkipVelopack) {
             throw "Velopack CLI installation failed with exit code $LASTEXITCODE."
         }
     }
-    if (Test-Path -LiteralPath $velopackDirectory) {
-        Remove-Item -LiteralPath $velopackDirectory -Recurse -Force
-    }
     & $vpk pack `
         --packId "MeowField_AutoPiano" `
         --packVersion $version `
