@@ -2,7 +2,7 @@
 
 MeowField_AutoPiano 是一款面向 Windows 的 MIDI 自动演奏软件，适配游戏《开放空间》
 
-当前版本基线：**2.0.0**
+当前版本：**2.0.1**（2.0 为正式版基线）
 
 项目主页：<https://github.com/Tsundeer/MeowField_AutoPiano>
 

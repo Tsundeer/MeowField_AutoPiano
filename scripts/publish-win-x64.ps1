@@ -1,20 +1,24 @@
 param(
-    [string]$Configuration = "Release"
+    [string]$Configuration = "Release",
+    [switch]$SkipInstaller
 )
 
 $ErrorActionPreference = "Stop"
 $repositoryRoot = Split-Path -Parent $PSScriptRoot
 $project = Join-Path $repositoryRoot "src\MeowField.App\MeowField.App.csproj"
 $publishDirectory = Join-Path $repositoryRoot "artifacts\publish\win-x64"
-$archivePath = Join-Path $repositoryRoot "artifacts\MeowField-AutoPlay-Lite-win-x64.zip"
+$installerScript = Join-Path $repositoryRoot "installer\MeowField_AutoPiano.iss"
+
+[xml]$projectFile = Get-Content -LiteralPath $project
+$version = @($projectFile.Project.PropertyGroup | ForEach-Object Version | Where-Object { $_ })[0]
+if ([string]::IsNullOrWhiteSpace($version)) {
+    throw "The application project must define a Version property."
+}
+
+$portableArchive = Join-Path $repositoryRoot "artifacts\MeowField_AutoPiano-$version-win-x64-portable.zip"
 
 if (Test-Path -LiteralPath $publishDirectory) {
-    $resolvedPublish = (Resolve-Path -LiteralPath $publishDirectory).Path
-    $expectedPublish = [System.IO.Path]::GetFullPath($publishDirectory)
-    if (-not $resolvedPublish.Equals($expectedPublish, [System.StringComparison]::OrdinalIgnoreCase)) {
-        throw "Refusing to clean unexpected publish directory: $resolvedPublish"
-    }
-    Remove-Item -LiteralPath $resolvedPublish -Recurse -Force
+    Remove-Item -LiteralPath $publishDirectory -Recurse -Force
 }
 
 dotnet publish $project `
@@ -33,10 +37,31 @@ if ($LASTEXITCODE -ne 0) {
 
 Get-ChildItem -LiteralPath $publishDirectory -File -Filter "*.dylib" | Remove-Item -Force
 
-if (Test-Path -LiteralPath $archivePath) {
-    Remove-Item -LiteralPath $archivePath -Force
+if (Test-Path -LiteralPath $portableArchive) {
+    Remove-Item -LiteralPath $portableArchive -Force
+}
+Compress-Archive -Path (Join-Path $publishDirectory "*") -DestinationPath $portableArchive -CompressionLevel Optimal
+
+if (-not $SkipInstaller) {
+    $isccCandidates = @(
+        (Get-Command iscc -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source -ErrorAction SilentlyContinue),
+        (Join-Path $env:LOCALAPPDATA "Programs\Inno Setup 6\ISCC.exe"),
+        "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+    ) | Where-Object { $_ -and (Test-Path -LiteralPath $_) }
+
+    $iscc = $isccCandidates | Select-Object -First 1
+    if (-not $iscc) {
+        throw "Inno Setup 6 was not found. Install it or use -SkipInstaller for a portable build only."
+    }
+
+    & $iscc "/DMyAppVersion=$version" "/DPublishDir=$publishDirectory" $installerScript
+    if ($LASTEXITCODE -ne 0) {
+        throw "Inno Setup failed with exit code $LASTEXITCODE."
+    }
 }
 
-Compress-Archive -Path (Join-Path $publishDirectory "*") -DestinationPath $archivePath -CompressionLevel Optimal
-Write-Host "Published: $publishDirectory"
-Write-Host "Archive:   $archivePath"
+Write-Host "Published:        $publishDirectory"
+Write-Host "Portable archive: $portableArchive"
+if (-not $SkipInstaller) {
+    Write-Host "Installer:        $(Join-Path $repositoryRoot "artifacts\installer")"
+}
