@@ -20,10 +20,16 @@
             <Button Grid.Column="1" Margin="8,0,0,0" Command="{Binding SearchCommand}"><StackPanel Orientation="Horizontal"><iconPacks:PackIconLucide Kind="Search" Width="15" Height="15" /><TextBlock Margin="7,0,0,0" Text="搜索" /></StackPanel></Button>
         </Grid>
         <Border Grid.Row="4" Background="{DynamicResource Brush.Surface.Panel}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1" CornerRadius="6">
-            <DataGrid ItemsSource="{Binding Tracks}" SelectedItem="{Binding SelectedTrack}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" HeadersVisibility="Column" GridLinesVisibility="Horizontal" BorderThickness="0" RowHeight="38">
+            <DataGrid ItemsSource="{Binding Tracks}" SelectedItem="{Binding SelectedTrack}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" HeadersVisibility="Column" GridLinesVisibility="None" BorderThickness="0" RowHeight="42">
+                <DataGrid.RowStyle>
+                    <Style TargetType="DataGridRow">
+                        <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Default}" />
+                        <Setter Property="BorderThickness" Value="0,0,0,1" />
+                    </Style>
+                </DataGrid.RowStyle>
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="曲名" Binding="{Binding Name}" Width="2*" />
-                    <DataGridTextColumn Header="分类" Binding="{Binding Category}" Width="*" />
+                    <DataGridTextColumn Header="分类" Binding="{Binding DisplayCategory}" Width="*" />
                     <DataGridTextColumn Header="大小" Binding="{Binding Bytes, StringFormat={}{0:N0} B}" Width="100" />
                 </DataGrid.Columns>
             </DataGrid>

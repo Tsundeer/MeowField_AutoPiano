@@ -96,7 +96,8 @@ public partial class OnlineLibraryViewModel : ObservableObject
         var filtered = string.IsNullOrWhiteSpace(keyword)
             ? _catalog
             : _catalog.Where(track => track.Name.Contains(keyword, StringComparison.CurrentCultureIgnoreCase) ||
-                                      track.Category.Contains(keyword, StringComparison.CurrentCultureIgnoreCase)).ToList();
+                                      track.Category.Contains(keyword, StringComparison.CurrentCultureIgnoreCase) ||
+                                      track.DisplayCategory.Contains(keyword, StringComparison.CurrentCultureIgnoreCase)).ToList();
         Tracks.Clear();
         foreach (var track in filtered.Take(500)) Tracks.Add(track);
         Total = filtered.Count;
@@ -112,6 +113,19 @@ public partial class OnlineLibraryViewModel : ObservableObject
     private sealed record OnlineCatalog(int SchemaVersion, List<OnlineMidiTrack>? Tracks);
 }
 
-public sealed record OnlineMidiTrack(string Id, string Name, string Category, string Path, string Sha256, long Bytes);
+public sealed record OnlineMidiTrack(string Id, string Name, string Category, string Path, string Sha256, long Bytes)
+{
+    public string DisplayCategory => Category switch
+    {
+        "game-music" => "游戏音乐",
+        "anime-acg" => "动漫与 ACG",
+        "virtual-singers" => "虚拟歌手",
+        "classical-light" => "古典与轻音乐",
+        "drums-rhythm" => "鼓组与节奏",
+        "asian-pop" => "华语与亚洲流行",
+        "world-pop" => "欧美与其他",
+        _ => "未分类",
+    };
+}
 
 public sealed record OnlineMidiPayload(string Name, byte[] Content);

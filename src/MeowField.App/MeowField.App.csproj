@@ -30,7 +30,7 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets\MeowField_AutoPiano.ico</ApplicationIcon>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
-    <Version>2.1.1</Version>
+    <Version>2.1.2</Version>
     <AssemblyName>MeowField_AutoPiano</AssemblyName>
   </PropertyGroup>
 </Project>
