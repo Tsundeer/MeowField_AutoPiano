@@ -54,6 +54,7 @@ public interface IPlaybackEngine : IDisposable
     void Load(ParsedMidi midi, MappingConfig config);
     void Play(nint targetWindow);
     void Pause();
+    void Seek(int cursorMs);
     void Stop();
 }
 

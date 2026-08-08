@@ -13,6 +13,9 @@ public sealed class WindowsInputSink(ILogger<WindowsInputSink>? logger = null) :
     private const uint KeyEventScanCode = 0x0008;
     private const uint WmKeyDown = 0x0100;
     private const uint WmKeyUp = 0x0101;
+    private const uint WmActivate = 0x0006;
+    private const uint WmSetFocus = 0x0007;
+    private const nuint WaActive = 1;
 
     public void SendBatch(IReadOnlyList<PlayEvent> events, InputMode mode, nint targetWindow, int latencyMs)
     {
@@ -23,9 +26,12 @@ public sealed class WindowsInputSink(ILogger<WindowsInputSink>? logger = null) :
 
         if (mode == InputMode.WindowMessage)
         {
+            var messageTarget = ResolveMessageTarget(targetWindow);
+            PostMessage(messageTarget, WmActivate, WaActive, 0);
+            PostMessage(messageTarget, WmSetFocus, 0, 0);
             foreach (var item in events)
             {
-                PostKey(targetWindow, item.Key, item.Type == PlayEventType.Down);
+                PostKey(messageTarget, item.Key, item.Type == PlayEventType.Down);
             }
         }
         else
@@ -108,6 +114,30 @@ public sealed class WindowsInputSink(ILogger<WindowsInputSink>? logger = null) :
                 PostSingle(targetWindow, KeyboardMap.ModifierVirtualKeys[modifier], KeyboardMap.ModifierScans[modifier], false);
             }
         }
+    }
+
+    private static nint ResolveMessageTarget(nint topWindow)
+    {
+        if (topWindow == 0 || !IsWindow(topWindow))
+        {
+            throw new InvalidOperationException("The target window is no longer available.");
+        }
+
+        var candidates = new List<nint>();
+        EnumChildWindows(topWindow, (handle, _) =>
+        {
+            if (IsWindowVisible(handle) && GetClientArea(handle) > 0) candidates.Add(handle);
+            return true;
+        }, 0);
+
+        // Game clients commonly receive keyboard messages in their largest render child.
+        return candidates.OrderByDescending(GetClientArea).FirstOrDefault(topWindow);
+    }
+
+    private static long GetClientArea(nint handle)
+    {
+        if (!GetClientRect(handle, out var rect)) return 0;
+        return (long)Math.Max(0, rect.Right - rect.Left) * Math.Max(0, rect.Bottom - rect.Top);
     }
 
     private static void PostSingle(nint window, ushort virtualKey, ushort scanCode, bool isDown)
@@ -220,8 +250,31 @@ public sealed class WindowsInputSink(ILogger<WindowsInputSink>? logger = null) :
     private static extern bool IsWindow(nint window);
 
     [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool IsWindowVisible(nint handle);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool EnumChildWindows(nint parent, EnumWindowsCallback callback, nint parameter);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GetClientRect(nint handle, out Rect rect);
+
+    [DllImport("user32.dll")]
     private static extern nint GetForegroundWindow();
 
     [DllImport("user32.dll")]
     private static extern uint GetWindowThreadProcessId(nint window, out uint processId);
+
+    private delegate bool EnumWindowsCallback(nint handle, nint parameter);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct Rect
+    {
+        public int Left;
+        public int Top;
+        public int Right;
+        public int Bottom;
+    }
 }

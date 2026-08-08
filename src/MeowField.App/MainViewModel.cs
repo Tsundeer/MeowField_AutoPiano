@@ -315,7 +315,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         try
         {
             using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(8) };
-            client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("MeowField-AutoPiano", VersionText));
+            client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("MeowField-AutoPiano", CurrentVersion));
             using var response = await client.GetAsync("https://api.github.com/repos/Tsundeer/MeowField_AutoPiano/releases/latest");
             if (!response.IsSuccessStatusCode)
             {

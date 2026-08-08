@@ -112,6 +112,34 @@ public sealed class PlaybackEngine : IPlaybackEngine
         }
     }
 
+    public void Seek(int cursorMs)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        bool wasPlaying;
+        bool wasPaused;
+        nint targetWindow;
+        lock (_gate)
+        {
+            if (_events.Count == 0) return;
+            wasPlaying = _snapshot.State == PlaybackState.Playing;
+            wasPaused = _snapshot.State == PlaybackState.Paused;
+            targetWindow = _targetWindow;
+        }
+
+        StopWorker(resetCursor: false);
+        lock (_gate)
+        {
+            var position = Math.Clamp(cursorMs, 0, _snapshot.DurationMs);
+            var state = wasPlaying ? PlaybackState.Loaded : wasPaused ? PlaybackState.Paused : _snapshot.State;
+            SetSnapshotLocked(_snapshot with { State = state, CursorMs = position, ActiveKeys = SnapshotKeys() });
+        }
+
+        if (wasPlaying)
+        {
+            Play(targetWindow);
+        }
+    }
+
     public void Stop()
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
