@@ -34,6 +34,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     private (int Low, int High) _drumRange = (0, 127);
     private (int Low, int High) _microphoneRange = (NoteMapping.MicrophoneMinMidi, NoteMapping.MicrophoneMaxMidi);
     private bool _applyingConfig;
+    private bool _timelineDragging;
 
     public MainViewModel(
         IMidiFileReader midiReader,
@@ -102,6 +103,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     [ObservableProperty] private int elapsedMilliseconds;
     [ObservableProperty] private string activeKeysText = "-";
     [ObservableProperty] private double progress;
+    [ObservableProperty] private double seekPosition;
     [ObservableProperty] private double speed = 1;
     [ObservableProperty] private int transpose;
     [ObservableProperty] private int noteRangeLow = 48;
@@ -295,6 +297,10 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     [RelayCommand]
     private void Stop() => _playback.Stop();
+
+    public void SeekFromTimeline(double value) => _playback.Seek((int)Math.Round(value));
+    public void BeginTimelineSeek() => _timelineDragging = true;
+    public void EndTimelineSeek() => _timelineDragging = false;
 
     [RelayCommand]
     private void Navigate(string page)
@@ -613,6 +619,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
             Progress = snapshot.Progress;
             ElapsedText = FormatTime(snapshot.CursorMs);
             ElapsedMilliseconds = snapshot.CursorMs;
+            if (!_timelineDragging) SeekPosition = snapshot.CursorMs;
             DurationText = FormatTime(snapshot.DurationMs);
             DurationMilliseconds = snapshot.DurationMs;
             ActiveKeysText = snapshot.ActiveKeys.Count == 0 ? "-" : string.Join("  ", snapshot.ActiveKeys.Order(StringComparer.Ordinal));

@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Interop;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -69,6 +70,17 @@ public partial class MainWindow : Window
     private void OnMaximizeClick(object sender, RoutedEventArgs e) => WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
 
     private void OnCloseClick(object sender, RoutedEventArgs e) => Close();
+
+    private void OnTimelineSeekStarted(object sender, MouseButtonEventArgs e) => _viewModel.BeginTimelineSeek();
+
+    private void OnTimelineSeekReleased(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is Slider slider)
+        {
+            _viewModel.SeekFromTimeline(slider.Value);
+        }
+        _viewModel.EndTimelineSeek();
+    }
 
     private IntPtr WndProc(IntPtr hwnd, int message, IntPtr wParam, IntPtr lParam, ref bool handled)
     {
