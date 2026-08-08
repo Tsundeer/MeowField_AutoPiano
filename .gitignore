@@ -39,6 +39,7 @@ out/
 .webpack/
 
 # IDE
+.vs/
 .vscode/
 .idea/
 *.swp
@@ -47,16 +48,14 @@ out/
 .DS_Store
 
 # Build output
+**/bin/
+**/obj/
+artifacts/
 *.exe
 *.app
 *.dmg
 *.deb
 *.rpm
-apps/backend/build/
-apps/backend/dist/
-apps/frontend/dist/
-apps/frontend/release/
-
 # Test
 .pytest_cache/
 .coverage

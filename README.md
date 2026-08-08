@@ -1,89 +1,76 @@
-# MeowField AutoPlay Lite
+# MeowField_AutoPiano
 
-MeowField AutoPlay Lite 是一个面向游戏内乐器演奏场景的桌面自动演奏工具，提供前端界面、后端播放引擎、游戏配置切换和 Windows 打包能力。
+MeowField_AutoPiano 是一款面向 Windows 的 MIDI 自动演奏软件，适配游戏《开放空间》
 
-## 当前支持
+当前版本基线：**2.0.0**
 
-- 开放空间
-  - 钢琴
-  - 鼓组
-  - 麦克风模式
-- 第五人格
-  - 钢琴
-  - 竖琴
-  - 长笛
-- 异环
-  - 钢琴
+项目主页：<https://github.com/Tsundeer/MeowField_AutoPiano>
 
-## 主要能力
+## 软件能做什么
 
-- 支持加载 MIDI 并自动演奏
-- 支持按游戏切换键位映射与音域映射
-- 支持不同乐器模式的独立配置
-- 支持桌面端前后端分离开发
-- 支持 Windows 安装包与便携版打包
+- 自动播放 MIDI 文件
+- 支持钢琴、架子鼓、麦克风模式
+- 支持目标窗口绑定和游戏键位映射
+- 支持 SendInput、窗口消息两种输入方式
+- 支持播放队列、曲库、播放预设和定时播放
+- 支持速度、移调、复音数、链路补偿等参数调整
+- 支持浅色/深色主题和中英文界面
+- 支持在设置页检查新版本
 
-## 快速上手
+## 使用方法
 
-### 环境要求
+1. 启动 `MeowField_AutoPiano.exe`。
+2. 在“播放”页面选择目标游戏窗口。
+3. 点击“打开 MIDI”，或将 `.mid` / `.midi` 文件拖入窗口。
+4. 选择乐器、输入方式和键位映射。
+5. 点击播放，或使用设置中显示的全局播放快捷键。
 
-- Windows
-- Python 3.10 及以上
-- Node.js 18 及以上
+使用 `SendInput` 时，目标游戏必须位于前台。窗口失去前台后，软件会停止发送并显示提示，不会继续向其他程序输入按键。
 
-### 启动后端
+## 架子鼓模式
+
+架子鼓使用 General MIDI 鼓组音符，并将标准鼓音归并到游戏可用的鼓位。未被游戏单独提供的鼓音会映射到最接近的鼓位，不会被静默跳过。
+
+## 设置与更新
+
+在左侧“设置”页面可以：
+
+- 切换主题和语言
+- 查看播放安全提示
+- 检查 GitHub 最新版本
+- 打开版本发布页
+- 查看软件版本、作者署名和项目地址
+
+更新检查只读取 GitHub Releases 的版本信息，不会后台覆盖本地程序。发现新版本后，请从发布页下载新的 Windows ZIP 包并解压替换。
+
+## Windows 要求
+
+- Windows 10 或更高版本
+- 64 位系统
+
+正式发布包为自包含版本，普通用户不需要安装 .NET SDK、Python 或 Node.js。
+
+## 数据和日志
+
+软件设置、曲库索引、播放列表和预设保存在 Windows 用户本地应用数据目录。日志可以在“日志与诊断”页面导出为诊断包。
+
+## 开源与构建
+
+本仓库只提交源代码、测试和构建脚本，不提交 `bin/`、`obj/`、`artifacts/` 或其他编译产物。普通用户请直接下载 GitHub Releases 中的 ZIP；开发者可以使用 .NET 10 SDK 构建：
 
 ```powershell
-cd apps/backend
-python -m pip install -e .
-python -m src.app.main
+dotnet build MeowField.sln
+dotnet test MeowField.sln --no-build
 ```
 
-### 启动前端
+生成 Windows 发布包：
 
 ```powershell
-cd apps/frontend
-npm install
-npm run dev
+.\scripts\publish-win-x64.ps1
 ```
 
-### 使用流程
+构建输出仅用于本地发布，不应提交到 GitHub。
 
-1. 启动后端和前端。
-2. 在界面中选择目标游戏与乐器模式。
-3. 绑定目标游戏进程。
-4. 加载 MIDI 文件。
-5. 开始播放并切回游戏窗口。
+## 许可
 
-## 打包
-
-在仓库根目录运行：
-
-```powershell
-.\build.bat
-```
-
-构建脚本会先打包后端，再打包桌面端安装程序。
-
-## 仓库结构
-
-```text
-MeowField_AutoPlay_Lite/
-├─ apps/
-│  ├─ backend/   # Python 后端
-│  └─ frontend/  # Electron + React 前端
-├─ build.bat     # Windows 构建脚本
-├─ LICENSE       # GPL-3.0
-└─ README.md
-```
-
-## 资源说明
-
-- Web 图标：`apps/frontend/public/favicon.ico`
-- Windows 图标：`apps/frontend/build/icon.ico`
-
-## 开源许可
-
-本项目采用 [GPL-3.0](LICENSE) 许可发布。
-
-如果你分发修改版或衍生版本，需要继续按照 GPL-3.0 提供对应源码与许可信息。
+本项目采用 GPL-3.0 开源许可，详见 [`LICENSE`](LICENSE)。
