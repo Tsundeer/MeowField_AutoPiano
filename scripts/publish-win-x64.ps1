@@ -1,6 +1,6 @@
 param(
     [string]$Configuration = "Release",
-    [switch]$SkipInstaller,
+    [switch]$LegacyInnoInstaller,
     [switch]$SkipVelopack
 )
 
@@ -17,11 +17,12 @@ if ([string]::IsNullOrWhiteSpace($version)) {
     throw "The application project must define a Version property."
 }
 
-$portableArchive = Join-Path $repositoryRoot "artifacts\MeowField_AutoPiano-$version-win-x64-portable.zip"
-
 if (Test-Path -LiteralPath $publishDirectory) {
     Remove-Item -LiteralPath $publishDirectory -Recurse -Force
 }
+
+Get-ChildItem -LiteralPath (Join-Path $repositoryRoot "artifacts") -File -Filter "*.zip" -ErrorAction SilentlyContinue |
+    Remove-Item -Force
 
 dotnet publish $project `
     --configuration $Configuration `
@@ -38,12 +39,7 @@ if ($LASTEXITCODE -ne 0) {
 
 Get-ChildItem -LiteralPath $publishDirectory -File -Filter "*.dylib" | Remove-Item -Force
 
-if (Test-Path -LiteralPath $portableArchive) {
-    Remove-Item -LiteralPath $portableArchive -Force
-}
-Compress-Archive -Path (Join-Path $publishDirectory "*") -DestinationPath $portableArchive -CompressionLevel Optimal
-
-if (-not $SkipInstaller) {
+if ($LegacyInnoInstaller) {
     $isccCandidates = @(
         (Get-Command iscc -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source -ErrorAction SilentlyContinue),
         (Join-Path $env:LOCALAPPDATA "Programs\Inno Setup 6\ISCC.exe"),
@@ -52,7 +48,7 @@ if (-not $SkipInstaller) {
 
     $iscc = $isccCandidates | Select-Object -First 1
     if (-not $iscc) {
-        throw "Inno Setup 6 was not found. Install it or use -SkipInstaller for a portable build only."
+        throw "Inno Setup 6 was not found. Install it or use the Velopack installer build."
     }
 
     & $iscc "/DMyAppVersion=$version" "/DPublishDir=$publishDirectory" $installerScript
@@ -83,11 +79,12 @@ if (-not $SkipVelopack) {
     if ($LASTEXITCODE -ne 0) {
         throw "Velopack packaging failed with exit code $LASTEXITCODE."
     }
+    Get-ChildItem -LiteralPath $velopackDirectory -File -Filter "*Portable.zip" -ErrorAction SilentlyContinue |
+        Remove-Item -Force
 }
 
 Write-Host "Published:        $publishDirectory"
-Write-Host "Portable archive: $portableArchive"
-if (-not $SkipInstaller) {
+if ($LegacyInnoInstaller) {
     Write-Host "Installer:        $(Join-Path $repositoryRoot "artifacts\installer")"
 }
 if (-not $SkipVelopack) {

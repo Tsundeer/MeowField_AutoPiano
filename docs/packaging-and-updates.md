@@ -12,4 +12,6 @@ MeowField_AutoPiano 使用 self-contained `win-x64` 发布，普通用户不需�
 .\scripts\publish-win-x64.ps1
 ```
 
+The build script removes portable ZIP output. Velopack full and delta packages remain as updater internals; the user-facing release asset is the Setup installer.
+
 脚本会自动安装本地 `vpk` 工具，并在 `artifacts\velopack` 生成 Setup、完整包、更新索引和便携包。`bin/`、`obj/` 和 `artifacts/` 不提交到 GitHub。
