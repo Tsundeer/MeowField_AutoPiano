@@ -1,0 +1,39 @@
+<UserControl x:Class="MeowField.App.Views.OnlineLibraryView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks">
+    <Grid Margin="24,20,24,18">
+        <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="16" /><RowDefinition Height="Auto" /><RowDefinition Height="14" /><RowDefinition Height="*" /><RowDefinition Height="14" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+        <Grid>
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+            <StackPanel>
+                <TextBlock Style="{StaticResource HeadingText}" Text="在线曲库" />
+                <TextBlock Margin="0,5,0,0" Style="{StaticResource SecondaryText}" Text="浏览、搜索并下载经过完整性校验的 MIDI 文件" />
+            </StackPanel>
+            <Button Grid.Column="1" Style="{StaticResource PrimaryButton}" Command="{Binding RefreshCommand}">
+                <StackPanel Orientation="Horizontal"><iconPacks:PackIconLucide Kind="RefreshCw" Width="15" Height="15" /><TextBlock Margin="7,0,0,0" Text="刷新曲库" /></StackPanel>
+            </Button>
+        </Grid>
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+            <TextBox Text="{Binding Query, UpdateSourceTrigger=PropertyChanged}" ToolTip="搜索曲名或分类" />
+            <Button Grid.Column="1" Margin="8,0,0,0" Command="{Binding SearchCommand}"><StackPanel Orientation="Horizontal"><iconPacks:PackIconLucide Kind="Search" Width="15" Height="15" /><TextBlock Margin="7,0,0,0" Text="搜索" /></StackPanel></Button>
+        </Grid>
+        <Border Grid.Row="4" Background="{DynamicResource Brush.Surface.Panel}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1" CornerRadius="6">
+            <DataGrid ItemsSource="{Binding Tracks}" SelectedItem="{Binding SelectedTrack}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" HeadersVisibility="Column" GridLinesVisibility="Horizontal" BorderThickness="0" RowHeight="38">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="曲名" Binding="{Binding Name}" Width="2*" />
+                    <DataGridTextColumn Header="分类" Binding="{Binding Category}" Width="*" />
+                    <DataGridTextColumn Header="大小" Binding="{Binding Bytes, StringFormat={}{0:N0} B}" Width="100" />
+                </DataGrid.Columns>
+            </DataGrid>
+        </Border>
+        <Grid Grid.Row="6">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+            <TextBlock Style="{StaticResource SecondaryText}" Text="{Binding StatusText}" TextTrimming="CharacterEllipsis" />
+            <Button Grid.Column="1" Style="{StaticResource PrimaryButton}" Command="{Binding DownloadSelectedCommand}">
+                <StackPanel Orientation="Horizontal"><iconPacks:PackIconLucide Kind="Download" Width="15" Height="15" /><TextBlock Margin="7,0,0,0" Text="下载并载入" /></StackPanel>
+            </Button>
+        </Grid>
+    </Grid>
+</UserControl>

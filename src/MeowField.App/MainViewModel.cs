@@ -42,6 +42,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         IUserDataStore store,
         ILegacyDataImporter legacyImporter,
         LibraryViewModel library,
+        OnlineLibraryViewModel onlineLibrary,
         ProfilesViewModel profiles,
         ConverterViewModel converter,
         ScheduleViewModel schedule,
@@ -54,12 +55,14 @@ public partial class MainViewModel : ObservableObject, IDisposable
         _legacyImporter = legacyImporter;
         _schedule = schedule;
         Library = library;
+        OnlineLibrary = onlineLibrary;
         Profiles = profiles;
         Converter = converter;
         Schedule = schedule;
         Diagnostics = diagnostics;
         Library.LoadRequested += (_, path) => _ = LoadMidiAsync(path);
         Library.QueueRequested += (_, entry) => AddToQueue(entry);
+        OnlineLibrary.MidiDownloaded += (_, path) => _ = LoadMidiAsync(path);
         Converter.MidiReady += (_, path) => _ = LoadMidiAsync(path);
         Profiles.ConfigSelected += (_, config) => { ApplyConfig(config); Profiles.RefreshKeyMappings(config); };
         Schedule.Due += (_, scheduleToPlay) => _ = OnScheduleDueAsync(scheduleToPlay);
@@ -73,6 +76,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     }
 
     public LibraryViewModel Library { get; }
+    public OnlineLibraryViewModel OnlineLibrary { get; }
     public ProfilesViewModel Profiles { get; }
     public ConverterViewModel Converter { get; }
     public ScheduleViewModel Schedule { get; }
@@ -140,6 +144,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     public string OriginalFitRatioSummary => IsEnglish ? $"Original {OriginalFitRatioLabel}" : $"原始 {OriginalFitRatioLabel}";
     public bool IsPlaybackVisible => ActivePage == "playback";
     public bool IsLibraryVisible => ActivePage == "library";
+    public bool IsOnlineLibraryVisible => ActivePage == "online-library";
     public bool IsScheduleVisible => ActivePage == "schedule";
     public bool IsConverterVisible => ActivePage == "converter";
     public bool IsProfilesVisible => ActivePage == "profiles";
@@ -417,6 +422,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     {
         OnPropertyChanged(nameof(IsPlaybackVisible));
         OnPropertyChanged(nameof(IsLibraryVisible));
+        OnPropertyChanged(nameof(IsOnlineLibraryVisible));
         OnPropertyChanged(nameof(IsScheduleVisible));
         OnPropertyChanged(nameof(IsConverterVisible));
         OnPropertyChanged(nameof(IsProfilesVisible));

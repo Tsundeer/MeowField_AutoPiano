@@ -47,6 +47,7 @@ public partial class App : System.Windows.Application
                     services.AddSingleton<IDiagnosticService, DiagnosticService>();
                     services.AddSingleton<ILegacyDataImporter, LegacyDataImporter>();
                     services.AddSingleton<LibraryViewModel>();
+                    services.AddSingleton<OnlineLibraryViewModel>();
                     services.AddSingleton<ProfilesViewModel>();
                     services.AddSingleton<ConverterViewModel>();
                     services.AddSingleton<ScheduleViewModel>();

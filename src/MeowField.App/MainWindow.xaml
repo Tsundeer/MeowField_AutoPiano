@@ -85,6 +85,9 @@
                     <Button Style="{StaticResource NavButton}" Tag="{Binding IsLibraryVisible}" Margin="0,4,0,0" Command="{Binding NavigateCommand}" CommandParameter="library">
                         <StackPanel Orientation="Horizontal"><iconPacks:PackIconLucide Kind="Library" Width="17" Height="17" /><TextBlock Margin="11,0,0,0" Text="曲库" /></StackPanel>
                     </Button>
+                    <Button Style="{StaticResource NavButton}" Tag="{Binding IsOnlineLibraryVisible}" Margin="0,4,0,0" Command="{Binding NavigateCommand}" CommandParameter="online-library">
+                        <StackPanel Orientation="Horizontal"><iconPacks:PackIconLucide Kind="CloudDownload" Width="17" Height="17" /><TextBlock Margin="11,0,0,0" Text="在线曲库" /></StackPanel>
+                    </Button>
                     <Button Style="{StaticResource NavButton}" Tag="{Binding IsScheduleVisible}" Margin="0,4,0,0" Command="{Binding NavigateCommand}" CommandParameter="schedule">
                         <StackPanel Orientation="Horizontal"><iconPacks:PackIconLucide Kind="Clock" Width="17" Height="17" /><TextBlock Margin="11,0,0,0" Text="定时任务" /></StackPanel>
                     </Button>
@@ -291,6 +294,8 @@
 
         <views:LibraryView Grid.Row="1" Grid.Column="1" DataContext="{Binding Library}"
                            Visibility="{Binding DataContext.IsLibraryVisible, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BooleanToVisibilityConverter}}" />
+        <views:OnlineLibraryView Grid.Row="1" Grid.Column="1" DataContext="{Binding OnlineLibrary}"
+                                 Visibility="{Binding DataContext.IsOnlineLibraryVisible, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BooleanToVisibilityConverter}}" />
         <views:ScheduleView Grid.Row="1" Grid.Column="1" DataContext="{Binding Schedule}"
                             Visibility="{Binding DataContext.IsScheduleVisible, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BooleanToVisibilityConverter}}" />
         <views:ConverterView Grid.Row="1" Grid.Column="1" DataContext="{Binding Converter}"
