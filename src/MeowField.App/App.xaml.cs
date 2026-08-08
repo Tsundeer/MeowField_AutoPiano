@@ -71,7 +71,7 @@ public partial class App : System.Windows.Application
             Log.CloseAndFlush();
             MessageBox.Show(
                 $"MeowField 启动失败。\n\n{exception.Message}\n\n日志目录：{logDirectory}",
-                "MeowField AutoPlay Lite",
+                "MeowField_AutoPiano",
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);
             Shutdown(1);
@@ -83,7 +83,7 @@ public partial class App : System.Windows.Application
         Log.Error(e.Exception, "Unhandled UI exception");
         MessageBox.Show(
             $"程序遇到未处理错误：{e.Exception.Message}\n\n请在“日志与诊断”中导出诊断包。",
-            "MeowField AutoPlay Lite",
+            "MeowField_AutoPiano",
             MessageBoxButton.OK,
             MessageBoxImage.Error);
         e.Handled = true;
