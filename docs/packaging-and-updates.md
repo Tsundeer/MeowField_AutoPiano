@@ -1,17 +1,15 @@
-# Windows 发布与更新
+# Windows packaging and updates
 
-MeowField_AutoPiano 使用 self-contained `win-x64` 发布，普通用户不需要另外安装 .NET Runtime。
+MeowField_AutoPiano is published as a self-contained win-x64 application. Users do not need to install .NET Runtime separately.
 
-发布脚本会生成普通多文件应用目录并交给 Velopack 打包。首次安装使用 `MeowField_AutoPiano-win-Setup.exe`；安装后程序由 Velopack 管理版本目录、快捷方式和更新流程。
+The release installer is a WiX MSI package. It installs the complete application directory under Program Files, creates a Start Menu shortcut, appears in Windows Apps and Features, and supports major upgrades.
 
-设置页的“检查更新”会从 GitHub Releases 检查新版本。下载时 Velopack 优先使用 delta 包，只有差分包不可用时才回退到完整包。便携版不会自动覆盖自身，必须使用 Setup 安装版才能启用自动更新。
+The Settings page checks the latest GitHub Release for a versioned `.msi` asset. The MSI is downloaded to a temporary update directory, launched through `msiexec.exe`, and removed after the installer exits whether installation succeeds or fails.
 
-构建：
+Build the current installer:
 
 ```powershell
 .\scripts\publish-win-x64.ps1
 ```
 
-The build script removes portable ZIP output. Velopack full and delta packages remain as updater internals; the user-facing release asset is the Setup installer.
-
-脚本会自动安装本地 `vpk` 工具，并在 `artifacts\velopack` 生成 Setup、完整包、更新索引和便携包。`bin/`、`obj/` 和 `artifacts/` 不提交到 GitHub。
+The script keeps only `artifacts\\publish\\win-x64` and the current versioned MSI under `artifacts\\installer`. Portable ZIP files and old installer outputs are removed automatically.

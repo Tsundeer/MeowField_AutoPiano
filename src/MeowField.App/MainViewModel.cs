@@ -1,6 +1,8 @@
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Diagnostics;
+using System.Net.Http;
+using System.Text.Json;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -309,6 +311,88 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     [RelayCommand]
     private async Task CheckForUpdatesAsync()
+    {
+        UpdateStatus = IsEnglish ? "Checking for updates..." : "正在检查更新...";
+        string? installerPath = null;
+        try
+        {
+            using var client = new HttpClient { Timeout = TimeSpan.FromMinutes(5) };
+            client.DefaultRequestHeaders.UserAgent.ParseAdd($"MeowField-AutoPiano/{CurrentVersion}");
+            using var response = await client.GetAsync("https://api.github.com/repos/Tsundeer/MeowField_AutoPiano/releases/latest");
+            response.EnsureSuccessStatusCode();
+
+            using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+            var tag = document.RootElement.TryGetProperty("tag_name", out var tagElement) ? tagElement.GetString() : null;
+            var comparison = CompareVersions(tag, CurrentVersion);
+            if (comparison <= 0)
+            {
+                LatestVersion = CurrentVersion;
+                UpdateStatus = IsEnglish ? "You are up to date" : "当前已经是最新版本";
+                return;
+            }
+
+            var asset = document.RootElement.TryGetProperty("assets", out var assets)
+                ? assets.EnumerateArray().FirstOrDefault(item =>
+                    item.TryGetProperty("name", out var name) &&
+                    name.GetString()?.EndsWith(".msi", StringComparison.OrdinalIgnoreCase) == true)
+                : default;
+            var assetName = asset.ValueKind == JsonValueKind.Object && asset.TryGetProperty("name", out var assetNameElement)
+                ? assetNameElement.GetString()
+                : null;
+            var assetUrl = asset.ValueKind == JsonValueKind.Object && asset.TryGetProperty("browser_download_url", out var assetUrlElement)
+                ? assetUrlElement.GetString()
+                : null;
+            if (string.IsNullOrWhiteSpace(assetName) || string.IsNullOrWhiteSpace(assetUrl))
+            {
+                UpdateStatus = IsEnglish ? "The latest MSI installer was not found." : "最新版本没有找到 MSI 安装包。";
+                return;
+            }
+
+            LatestVersion = tag ?? string.Empty;
+            UpdateStatus = IsEnglish ? $"Downloading {tag}..." : $"正在下载 {tag} 安装包...";
+            var updateDirectory = Path.Combine(Path.GetTempPath(), "MeowField_AutoPiano", "updates");
+            Directory.CreateDirectory(updateDirectory);
+            installerPath = Path.Combine(updateDirectory, Path.GetFileName(assetName));
+            using (var download = await client.GetAsync(assetUrl, HttpCompletionOption.ResponseHeadersRead))
+            {
+                download.EnsureSuccessStatusCode();
+                await using var source = await download.Content.ReadAsStreamAsync();
+                await using var destination = File.Create(installerPath);
+                await source.CopyToAsync(destination);
+            }
+
+            var launcherPath = Path.Combine(updateDirectory, "apply-update.cmd");
+            var quotedMsi = installerPath.Replace("%", "%%");
+            var quotedLauncher = launcherPath.Replace("%", "%%");
+            var launcher = $"@echo off\r\n" +
+                "timeout /t 2 /nobreak >nul\r\n" +
+                $"msiexec.exe /i \"{quotedMsi}\" /passive /norestart\r\n" +
+                "set EXITCODE=%ERRORLEVEL%\r\n" +
+                $"del /f /q \"{quotedMsi}\" >nul 2>&1\r\n" +
+                $"del /f /q \"{quotedLauncher}\" >nul 2>&1\r\n" +
+                "exit /b %EXITCODE%\r\n";
+            await File.WriteAllTextAsync(launcherPath, launcher, System.Text.Encoding.ASCII);
+            Process.Start(new ProcessStartInfo("cmd.exe", $"/c \"{launcherPath}\"")
+            {
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                WindowStyle = ProcessWindowStyle.Hidden,
+            });
+            UpdateStatus = IsEnglish ? "The installer is starting..." : "安装程序正在启动...";
+            System.Windows.Application.Current.Shutdown();
+        }
+        catch (Exception exception)
+        {
+            if (installerPath is not null)
+            {
+                try { File.Delete(installerPath); } catch { }
+            }
+            UpdateStatus = IsEnglish ? $"Update failed: {exception.Message}" : $"更新失败：{exception.Message}";
+        }
+    }
+
+    [RelayCommand]
+    private async Task LegacyCheckForUpdatesAsync()
     {
         UpdateStatus = IsEnglish ? "Checking for updates..." : "正在检查更新...";
         try
