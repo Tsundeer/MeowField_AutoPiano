@@ -10,6 +10,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Resource Include="Assets\MeowField_AutoPiano.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
     <PackageReference Include="MahApps.Metro.IconPacks.Lucide" Version="6.2.1" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.10" />
@@ -24,6 +28,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\MeowField_AutoPiano.ico</ApplicationIcon>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <Version>2.0.1</Version>
     <AssemblyName>MeowField_AutoPiano</AssemblyName>
