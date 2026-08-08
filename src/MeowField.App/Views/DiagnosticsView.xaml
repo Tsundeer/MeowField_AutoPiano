@@ -1,0 +1,22 @@
+<UserControl x:Class="MeowField.App.Views.DiagnosticsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks">
+    <Grid Margin="24,20">
+        <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="20" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+        <StackPanel><TextBlock Style="{StaticResource HeadingText}" Text="日志与诊断" /><TextBlock Margin="0,5,0,0" Style="{StaticResource SecondaryText}" Text="查看运行环境并导出故障诊断包" /></StackPanel>
+        <Border Grid.Row="2" Background="{DynamicResource Brush.Surface.Panel}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1" CornerRadius="6" Padding="20" MaxWidth="760" HorizontalAlignment="Left">
+            <Grid Width="700"><Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="16" /><RowDefinition Height="Auto" /><RowDefinition Height="16" /><RowDefinition Height="Auto" /><RowDefinition Height="20" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+                <TextBlock FontWeight="SemiBold" Text="运行环境" />
+                <TextBlock Grid.Row="2" Text="{Binding RuntimeText}" />
+                <StackPanel Grid.Row="4"><TextBlock Style="{StaticResource SecondaryText}" Text="日志目录" /><TextBlock Margin="0,6,0,0" Text="{Binding LogDirectory}" /></StackPanel>
+                <Grid Grid.Row="6"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                    <TextBlock><TextBlock.Text><MultiBinding Converter="{StaticResource UiTextConverter}"><Binding Path="StatusText" /><Binding Path="DataContext.IsEnglish" RelativeSource="{RelativeSource AncestorType=Window}" /></MultiBinding></TextBlock.Text></TextBlock>
+                    <Button Grid.Column="1" Style="{StaticResource PrimaryButton}" Command="{Binding ExportCommand}">
+                        <StackPanel Orientation="Horizontal"><iconPacks:PackIconLucide Kind="Download" Width="15" Height="15" /><TextBlock Margin="7,0,0,0" Text="导出诊断包" /></StackPanel>
+                    </Button>
+                </Grid>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

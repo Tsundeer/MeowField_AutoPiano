@@ -1,0 +1,64 @@
+<UserControl x:Class="MeowField.App.Views.LibraryView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks">
+    <Grid Margin="24,20,24,18">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" /><RowDefinition Height="16" /><RowDefinition Height="Auto" />
+            <RowDefinition Height="12" /><RowDefinition Height="*" /><RowDefinition Height="12" /><RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <Grid>
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+            <StackPanel>
+                <TextBlock Style="{StaticResource HeadingText}" Text="曲库" />
+                <TextBlock Margin="0,5,0,0" Style="{StaticResource SecondaryText}" Text="扫描、搜索并管理本地 MIDI，原文件不会被自动删除" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                <Button Command="{Binding AddFileCommand}">
+                    <StackPanel Orientation="Horizontal"><iconPacks:PackIconLucide Kind="FilePlus" Width="15" Height="15" /><TextBlock Margin="7,0,0,0" Text="添加文件" /></StackPanel>
+                </Button>
+                <Button Margin="8,0,0,0" Style="{StaticResource PrimaryButton}" Command="{Binding ScanFolderCommand}">
+                    <StackPanel Orientation="Horizontal"><iconPacks:PackIconLucide Kind="FolderSearch" Width="15" Height="15" /><TextBlock Margin="7,0,0,0" Text="扫描目录" /></StackPanel>
+                </Button>
+            </StackPanel>
+        </Grid>
+
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="260" /><ColumnDefinition Width="180" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+            <TextBox Height="32" Padding="9,5" Text="{Binding Query, UpdateSourceTrigger=PropertyChanged}" ToolTip="搜索曲名或目录" />
+            <ComboBox Grid.Column="1" Margin="10,0,0,0" ItemsSource="{Binding Folders}" SelectedItem="{Binding SelectedFolder}" />
+            <ProgressBar Grid.Column="2" Margin="16,0" VerticalAlignment="Center" Value="{Binding ScanProgress}" />
+            <Button Grid.Column="3" Command="{Binding CancelScanCommand}" IsEnabled="{Binding IsBusy}">取消扫描</Button>
+        </Grid>
+
+        <Border Grid.Row="4" Background="{DynamicResource Brush.Surface.Panel}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1" CornerRadius="6">
+            <DataGrid ItemsSource="{Binding Entries}" SelectedItem="{Binding SelectedEntry}" AutoGenerateColumns="False"
+                      CanUserAddRows="False" CanUserDeleteRows="False" IsReadOnly="True" HeadersVisibility="Column"
+                      GridLinesVisibility="Horizontal" BorderThickness="0" RowHeight="38">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="曲名" Binding="{Binding Name}" Width="2*" />
+                    <DataGridTextColumn Header="目录" Binding="{Binding Folder}" Width="*" />
+                    <DataGridTextColumn Header="时长" Binding="{Binding DurationMs}" Width="90" />
+                    <DataGridTextColumn Header="音符" Binding="{Binding Notes, StringFormat={}{0:N0}}" Width="80" />
+                    <DataGridTextColumn Header="路径" Binding="{Binding Path}" Width="2*" />
+                </DataGrid.Columns>
+            </DataGrid>
+        </Border>
+
+        <Grid Grid.Row="6">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="16" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+            <TextBlock Style="{StaticResource SecondaryText}"><TextBlock.Text><MultiBinding Converter="{StaticResource UiTextConverter}"><Binding Path="StatusText" /><Binding Path="DataContext.IsEnglish" RelativeSource="{RelativeSource AncestorType=Window}" /></MultiBinding></TextBlock.Text></TextBlock>
+            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                <Button Command="{Binding LoadSelectedCommand}">载入</Button>
+                <Button Margin="8,0,0,0" Command="{Binding AddSelectedToQueueCommand}">加入队列</Button>
+                <Button Margin="8,0,0,0" Command="{Binding DeleteSelectedCommand}">移出曲库</Button>
+                <Button Margin="8,0,0,0" Command="{Binding DeleteSourceCommand}">删除原文件</Button>
+            </StackPanel>
+            <StackPanel Grid.Column="3" Orientation="Horizontal">
+                <Button Command="{Binding PreviousPageCommand}" IsEnabled="{Binding CanPrevious}">上一页</Button>
+                <TextBlock Margin="12,0"><TextBlock.Text><MultiBinding Converter="{StaticResource UiTextConverter}"><Binding Path="CurrentPage" /><Binding Path="DataContext.IsEnglish" RelativeSource="{RelativeSource AncestorType=Window}" /><Binding Source="PageNumber" /></MultiBinding></TextBlock.Text></TextBlock>
+                <Button Command="{Binding NextPageCommand}" IsEnabled="{Binding CanNext}">下一页</Button>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</UserControl>

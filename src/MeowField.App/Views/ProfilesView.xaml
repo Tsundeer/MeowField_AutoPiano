@@ -1,0 +1,53 @@
+<UserControl x:Class="MeowField.App.Views.ProfilesView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid Margin="24,20">
+        <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="14" /><RowDefinition Height="1.2*" /><RowDefinition Height="14" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+        <StackPanel><TextBlock Style="{StaticResource HeadingText}" Text="键位与预设" /><TextBlock Margin="0,5,0,0" Style="{StaticResource SecondaryText}" Text="编辑 MIDI 音符到游戏键位的映射，并管理可复用的播放参数" /></StackPanel>
+
+        <Border Grid.Row="2" Background="{DynamicResource Brush.Surface.Panel}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1" CornerRadius="6" Padding="18">
+            <Grid>
+                <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="10" /><RowDefinition Height="*" /><RowDefinition Height="10" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+                <Grid>
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                    <StackPanel><TextBlock FontWeight="SemiBold" Text="自定义键位映射" /><TextBlock Margin="0,4,0,0" Style="{StaticResource SecondaryText}" Text="留空使用默认映射；同一个游戏键可以对应多个 MIDI 音符" /></StackPanel>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                        <Button Command="{Binding LoadCurrentKeyMapCommand}">载入当前</Button>
+                        <Button Margin="8,0,0,0" Style="{StaticResource PrimaryButton}" Command="{Binding ApplyKeyMapCommand}">应用映射</Button>
+                        <Button Margin="8,0,0,0" Command="{Binding ResetKeyMapCommand}">恢复默认</Button>
+                    </StackPanel>
+                </Grid>
+                <DataGrid Grid.Row="2" ItemsSource="{Binding KeyMappings}" AutoGenerateColumns="False" CanUserAddRows="False" HeadersVisibility="Column" RowHeight="32" GridLinesVisibility="Horizontal">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="MIDI" Binding="{Binding Note}" IsReadOnly="True" Width="80" />
+                        <DataGridTextColumn Header="音名" Binding="{Binding NoteName}" IsReadOnly="True" Width="100" />
+                        <DataGridTextColumn Header="游戏键" Binding="{Binding Key, UpdateSourceTrigger=PropertyChanged}" Width="*" />
+                    </DataGrid.Columns>
+                </DataGrid>
+                <TextBlock Grid.Row="4" Style="{StaticResource SecondaryText}" Text="支持单字符键位；应用后会立即重新生成当前 MIDI 的播放事件" />
+            </Grid>
+        </Border>
+
+        <Grid Grid.Row="4">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="14" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+            <Border Background="{DynamicResource Brush.Surface.Panel}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1" CornerRadius="6" Padding="18">
+                <Grid><Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="12" /><RowDefinition Height="*" /><RowDefinition Height="12" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+                    <TextBlock FontWeight="SemiBold" Text="游戏配置档案" />
+                    <ListBox Grid.Row="2" ItemsSource="{Binding GameProfiles}" SelectedItem="{Binding SelectedProfile}" DisplayMemberPath="Name" BorderThickness="0" />
+                    <Button Grid.Row="4" HorizontalAlignment="Left" Style="{StaticResource PrimaryButton}" Command="{Binding ApplyProfileCommand}">应用档案</Button>
+                </Grid>
+            </Border>
+            <Border Grid.Column="2" Background="{DynamicResource Brush.Surface.Panel}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1" CornerRadius="6" Padding="18">
+                <Grid><Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="12" /><RowDefinition Height="Auto" /><RowDefinition Height="12" /><RowDefinition Height="*" /><RowDefinition Height="12" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+                    <TextBlock FontWeight="SemiBold" Text="参数预设" />
+                    <Grid Grid.Row="2"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                        <TextBox Height="32" Padding="9,5" Text="{Binding PresetName}" /><Button Grid.Column="1" Margin="8,0,0,0" Command="{Binding SavePresetCommand}">保存当前</Button>
+                    </Grid>
+                    <ListBox Grid.Row="4" ItemsSource="{Binding Presets}" SelectedItem="{Binding SelectedPreset}" DisplayMemberPath="Name" BorderThickness="0" />
+                    <StackPanel Grid.Row="6" Orientation="Horizontal"><Button Style="{StaticResource PrimaryButton}" Command="{Binding ApplyPresetCommand}">应用预设</Button><Button Margin="8,0,0,0" Command="{Binding OverwritePresetCommand}">覆盖</Button><Button Margin="8,0,0,0" Command="{Binding DeletePresetCommand}">删除</Button></StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+        <TextBlock Grid.Row="5" Margin="0,14,0,0" Style="{StaticResource SecondaryText}"><TextBlock.Text><MultiBinding Converter="{StaticResource UiTextConverter}"><Binding Path="StatusText" /><Binding Path="DataContext.IsEnglish" RelativeSource="{RelativeSource AncestorType=Window}" /></MultiBinding></TextBlock.Text></TextBlock>
+    </Grid>
+</UserControl>

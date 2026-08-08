@@ -1,0 +1,27 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Color x:Key="Color.Surface.App">#18181B</Color>
+    <Color x:Key="Color.Surface.Panel">#202024</Color>
+    <Color x:Key="Color.Surface.Subtle">#29292E</Color>
+    <Color x:Key="Color.Text.Primary">#F4F2F3</Color>
+    <Color x:Key="Color.Text.Secondary">#B9B4B8</Color>
+    <Color x:Key="Color.Border.Default">#3A373B</Color>
+    <Color x:Key="Color.Accent.Primary">#F05A86</Color>
+    <Color x:Key="Color.Accent.Hover">#FF78A0</Color>
+    <Color x:Key="Color.Accent.Soft">#512534</Color>
+    <Color x:Key="Color.Status.Success">#68D391</Color>
+    <Color x:Key="Color.Status.Warning">#F6C453</Color>
+    <Color x:Key="Color.Status.Danger">#FF8191</Color>
+    <SolidColorBrush x:Key="Brush.Surface.App" Color="{StaticResource Color.Surface.App}" />
+    <SolidColorBrush x:Key="Brush.Surface.Panel" Color="{StaticResource Color.Surface.Panel}" />
+    <SolidColorBrush x:Key="Brush.Surface.Subtle" Color="{StaticResource Color.Surface.Subtle}" />
+    <SolidColorBrush x:Key="Brush.Text.Primary" Color="{StaticResource Color.Text.Primary}" />
+    <SolidColorBrush x:Key="Brush.Text.Secondary" Color="{StaticResource Color.Text.Secondary}" />
+    <SolidColorBrush x:Key="Brush.Border.Default" Color="{StaticResource Color.Border.Default}" />
+    <SolidColorBrush x:Key="Brush.Accent.Primary" Color="{StaticResource Color.Accent.Primary}" />
+    <SolidColorBrush x:Key="Brush.Accent.Hover" Color="{StaticResource Color.Accent.Hover}" />
+    <SolidColorBrush x:Key="Brush.Accent.Soft" Color="{StaticResource Color.Accent.Soft}" />
+    <SolidColorBrush x:Key="Brush.Status.Success" Color="{StaticResource Color.Status.Success}" />
+    <SolidColorBrush x:Key="Brush.Status.Warning" Color="{StaticResource Color.Status.Warning}" />
+    <SolidColorBrush x:Key="Brush.Status.Danger" Color="{StaticResource Color.Status.Danger}" />
+</ResourceDictionary>

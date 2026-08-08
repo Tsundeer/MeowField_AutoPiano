@@ -1,0 +1,33 @@
+<UserControl x:Class="MeowField.App.Views.ConverterView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks">
+    <Grid Margin="24,20">
+        <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="20" /><RowDefinition Height="*" /></Grid.RowDefinitions>
+        <StackPanel><TextBlock Style="{StaticResource HeadingText}" Text="音频转谱" /><TextBlock Margin="0,5,0,0" Style="{StaticResource SecondaryText}" Text="调用本机 PianoTrans 将音频转换为 MIDI" /></StackPanel>
+        <Border Grid.Row="2" Background="{DynamicResource Brush.Surface.Panel}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1" CornerRadius="6" Padding="22" MaxWidth="760" HorizontalAlignment="Left">
+            <StackPanel Width="700">
+                <TextBlock FontWeight="SemiBold" Text="PianoTrans" />
+                <Grid Margin="0,10,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                    <TextBlock Text="{Binding ExecutablePath}" TextTrimming="CharacterEllipsis" /><Button Grid.Column="1" Margin="12,0,0,0" Command="{Binding SelectConverterCommand}">选择目录</Button>
+                </Grid>
+                <TextBlock Margin="0,22,0,6" Style="{StaticResource SecondaryText}" Text="输入音频" />
+                <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                    <TextBox Height="32" Padding="9,5" Text="{Binding InputPath}" /><Button Grid.Column="1" Margin="8,0,0,0" Command="{Binding SelectAudioCommand}">浏览</Button>
+                </Grid>
+                <TextBlock Margin="0,14,0,6" Style="{StaticResource SecondaryText}" Text="输出 MIDI" />
+                <TextBox Height="32" Padding="9,5" Text="{Binding OutputPath}" />
+                <ProgressBar Margin="0,22,0,0" Value="{Binding Progress}" />
+                <Grid Margin="0,16,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                    <TextBlock TextWrapping="Wrap"><TextBlock.Text><MultiBinding Converter="{StaticResource UiTextConverter}"><Binding Path="StatusText" /><Binding Path="DataContext.IsEnglish" RelativeSource="{RelativeSource AncestorType=Window}" /></MultiBinding></TextBlock.Text></TextBlock>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <Button Style="{StaticResource PrimaryButton}" Command="{Binding ConvertCommand}" IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBooleanConverter}}">
+                        <StackPanel Orientation="Horizontal"><iconPacks:PackIconLucide Kind="AudioLines" Width="15" Height="15" /><TextBlock Margin="7,0,0,0" Text="开始转换" /></StackPanel>
+                    </Button>
+                    <Button Margin="8,0,0,0" Command="{Binding CancelConversionCommand}" IsEnabled="{Binding IsBusy}" ToolTip="取消转换"><iconPacks:PackIconLucide Kind="Square" Width="15" Height="15" /></Button>
+                    </StackPanel>
+                </Grid>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

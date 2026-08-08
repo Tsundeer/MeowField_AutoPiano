@@ -52,7 +52,6 @@ out/
 **/obj/
 artifacts/
 *.exe
-*.app
 *.dmg
 *.deb
 *.rpm
