@@ -1,15 +1,14 @@
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Diagnostics;
-using System.Net.Http.Headers;
-using System.Net.Http;
-using System.Text.Json;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MeowField.Application;
 using MeowField.Domain;
 using Microsoft.Win32;
+using Velopack;
+using Velopack.Sources;
 
 namespace MeowField.App;
 
@@ -314,6 +313,32 @@ public partial class MainViewModel : ObservableObject, IDisposable
         UpdateStatus = IsEnglish ? "Checking for updates..." : "正在检查更新...";
         try
         {
+            var manager = new UpdateManager(new GithubSource("https://github.com/Tsundeer/MeowField_AutoPiano", null, false, null));
+            if (!manager.IsInstalled)
+            {
+                UpdateStatus = IsEnglish
+                    ? "Updates are available after installing the Setup package."
+                    : "便携版不会自动更新，请使用 Setup 安装后启用增量更新。";
+                return;
+            }
+
+            var update = await manager.CheckForUpdatesAsync();
+            if (update is null)
+            {
+                LatestVersion = CurrentVersion;
+                UpdateStatus = IsEnglish ? "You are up to date" : "当前已经是最新版本";
+                return;
+            }
+
+            LatestVersion = update.TargetFullRelease.Version.ToString();
+            UpdateStatus = IsEnglish
+                ? $"New version available: {LatestVersion}. Downloading..."
+                : $"发现新版本：{LatestVersion}，正在下载增量更新...";
+            await manager.DownloadUpdatesAsync(update, _ => { });
+            manager.ApplyUpdatesAndRestart(update.TargetFullRelease);
+            return;
+
+/* legacy GitHub API update check removed; Velopack handles download and restart.
             using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(8) };
             client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("MeowField-AutoPiano", CurrentVersion));
             using var response = await client.GetAsync("https://api.github.com/repos/Tsundeer/MeowField_AutoPiano/releases/latest");
@@ -332,6 +357,12 @@ public partial class MainViewModel : ObservableObject, IDisposable
             UpdateStatus = comparison > 0
                 ? (IsEnglish ? $"New version available: {tag}" : $"发现新版本：{tag}")
                 : (IsEnglish ? "You are up to date" : "当前已是最新版本");
+        }
+        catch (Exception exception)
+        {
+            UpdateStatus = IsEnglish ? $"Update check failed: {exception.Message}" : $"检查更新失败：{exception.Message}";
+        }
+*/
         }
         catch (Exception exception)
         {
