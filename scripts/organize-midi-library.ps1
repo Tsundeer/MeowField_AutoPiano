@@ -90,8 +90,8 @@ $catalog = [PSCustomObject]@{
     generatedAt = [DateTimeOffset]::UtcNow.ToString("O")
     tracks = @($tracks | Sort-Object category, name)
 }
-$catalog | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $output "catalog.json") -Encoding utf8
-$duplicates | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $output "duplicates.json") -Encoding utf8
+$catalog | ConvertTo-Json -Depth 5 -Compress | Set-Content -LiteralPath (Join-Path $output "catalog.json") -Encoding utf8
+$duplicates | ConvertTo-Json -Depth 4 -Compress | Set-Content -LiteralPath (Join-Path $output "duplicates.json") -Encoding utf8
 @"
 # MeowField MIDI Library
 
