@@ -82,6 +82,11 @@ if (-not $SkipVelopack) {
     if ($LASTEXITCODE -ne 0) {
         throw "Velopack packaging failed with exit code $LASTEXITCODE."
     }
+    $generatedSetup = Join-Path $velopackDirectory "MeowField_AutoPiano-win-Setup.exe"
+    $versionedSetup = Join-Path $velopackDirectory "MeowField_AutoPiano-$version-win-Setup.exe"
+    if (Test-Path -LiteralPath $generatedSetup) {
+        Move-Item -LiteralPath $generatedSetup -Destination $versionedSetup -Force
+    }
     Get-ChildItem -LiteralPath $velopackDirectory -File -Filter "*Portable.zip" -ErrorAction SilentlyContinue |
         Remove-Item -Force
 }
