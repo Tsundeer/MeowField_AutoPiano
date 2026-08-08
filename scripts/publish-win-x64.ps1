@@ -66,6 +66,9 @@ if (-not $SkipVelopack) {
             throw "Velopack CLI installation failed with exit code $LASTEXITCODE."
         }
     }
+    Get-ChildItem -LiteralPath $velopackDirectory -File -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name -like "MeowField_AutoPiano-$version-*" -or $_.Name -eq "MeowField_AutoPiano-win-Setup.exe" } |
+        Remove-Item -Force
     & $vpk pack `
         --packId "MeowField_AutoPiano" `
         --packVersion $version `
