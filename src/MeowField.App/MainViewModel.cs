@@ -62,7 +62,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         Diagnostics = diagnostics;
         Library.LoadRequested += (_, path) => _ = LoadMidiAsync(path);
         Library.QueueRequested += (_, entry) => AddToQueue(entry);
-        OnlineLibrary.MidiDownloaded += (_, path) => _ = LoadMidiAsync(path);
+        OnlineLibrary.MidiLoaded += (_, payload) => _ = LoadOnlineMidiAsync(payload);
         Converter.MidiReady += (_, path) => _ = LoadMidiAsync(path);
         Profiles.ConfigSelected += (_, config) => { ApplyConfig(config); Profiles.RefreshKeyMappings(config); };
         Schedule.Due += (_, scheduleToPlay) => _ = OnScheduleDueAsync(scheduleToPlay);
@@ -175,7 +175,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
     }
 
-    public async Task LoadMidiAsync(string path)
+    public async Task LoadMidiAsync(string path, bool addToQueue = true, string? displayName = null)
     {
         try
         {
@@ -192,11 +192,11 @@ public partial class MainViewModel : ObservableObject, IDisposable
             _midi = midi;
             TimelineNotes = midi.Notes;
             _completionHandled = false;
-            EnsureQueueItem(path, Path.GetFileNameWithoutExtension(path));
+            if (addToQueue) EnsureQueueItem(path, Path.GetFileNameWithoutExtension(path));
             RaiseQueueState();
             _playback.Load(midi, config);
-            FileName = Path.GetFileNameWithoutExtension(path);
-            FilePath = Path.GetFullPath(path);
+            FileName = displayName ?? Path.GetFileNameWithoutExtension(path);
+            FilePath = displayName is null ? Path.GetFullPath(path) : "在线曲库";
             NoteCount = midi.Notes.Count;
             EventCount = PlaybackEventBuilder.Build(midi.Notes, config).Count;
             UpdateFitRatios();
@@ -214,6 +214,21 @@ public partial class MainViewModel : ObservableObject, IDisposable
         finally
         {
             IsBusy = false;
+        }
+    }
+
+    private async Task LoadOnlineMidiAsync(OnlineMidiPayload payload)
+    {
+        var temporaryPath = Path.Combine(Path.GetTempPath(), $"MeowField-{Guid.NewGuid():N}.mid");
+        try
+        {
+            await File.WriteAllBytesAsync(temporaryPath, payload.Content);
+            await LoadMidiAsync(temporaryPath, addToQueue: false, displayName: payload.Name);
+        }
+        finally
+        {
+            try { if (File.Exists(temporaryPath)) File.Delete(temporaryPath); }
+            catch (IOException) { /* The OS will clean a locked temporary file. */ }
         }
     }
 

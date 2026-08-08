@@ -16,7 +16,7 @@ public partial class OnlineLibraryViewModel : ObservableObject
     private readonly List<OnlineMidiTrack> _catalog = [];
 
     public ObservableCollection<OnlineMidiTrack> Tracks { get; } = [];
-    public event EventHandler<string>? MidiDownloaded;
+    public event EventHandler<OnlineMidiPayload>? MidiLoaded;
 
     [ObservableProperty] private string query = "";
     [ObservableProperty] private OnlineMidiTrack? selectedTrack;
@@ -62,13 +62,13 @@ public partial class OnlineLibraryViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private async Task DownloadSelectedAsync()
+    private async Task LoadSelectedAsync()
     {
         if (SelectedTrack is null || IsBusy) return;
         try
         {
             IsBusy = true;
-            StatusText = $"正在下载：{SelectedTrack.Name}";
+            StatusText = $"正在载入：{SelectedTrack.Name}";
             var relativePath = SelectedTrack.Path.Replace('\\', '/');
             var bytes = await _httpClient.GetByteArrayAsync(DownloadBaseUrl + Uri.EscapeDataString(relativePath).Replace("%2F", "/"));
             var hash = Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
@@ -77,12 +77,8 @@ public partial class OnlineLibraryViewModel : ObservableObject
                 throw new InvalidDataException("下载文件校验失败，请稍后重试。");
             }
 
-            var cacheDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MeowField", "online-library");
-            Directory.CreateDirectory(cacheDirectory);
-            var targetPath = Path.Combine(cacheDirectory, $"{SelectedTrack.Id}.mid");
-            await File.WriteAllBytesAsync(targetPath, bytes);
-            MidiDownloaded?.Invoke(this, targetPath);
-            StatusText = $"已下载并载入：{SelectedTrack.Name}";
+            MidiLoaded?.Invoke(this, new OnlineMidiPayload(SelectedTrack.Name, bytes));
+            StatusText = $"已载入播放：{SelectedTrack.Name}";
         }
         catch (Exception exception)
         {
@@ -117,3 +113,5 @@ public partial class OnlineLibraryViewModel : ObservableObject
 }
 
 public sealed record OnlineMidiTrack(string Id, string Name, string Category, string Path, string Sha256, long Bytes);
+
+public sealed record OnlineMidiPayload(string Name, byte[] Content);

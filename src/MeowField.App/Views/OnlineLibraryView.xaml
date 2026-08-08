@@ -8,7 +8,7 @@
             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
             <StackPanel>
                 <TextBlock Style="{StaticResource HeadingText}" Text="在线曲库" />
-                <TextBlock Margin="0,5,0,0" Style="{StaticResource SecondaryText}" Text="浏览、搜索并下载经过完整性校验的 MIDI 文件" />
+                <TextBlock Margin="0,5,0,0" Style="{StaticResource SecondaryText}" Text="浏览、搜索并即时载入经过完整性校验的 MIDI 文件；不保留本地副本" />
             </StackPanel>
             <Button Grid.Column="1" Style="{StaticResource PrimaryButton}" Command="{Binding RefreshCommand}">
                 <StackPanel Orientation="Horizontal"><iconPacks:PackIconLucide Kind="RefreshCw" Width="15" Height="15" /><TextBlock Margin="7,0,0,0" Text="刷新曲库" /></StackPanel>
@@ -31,8 +31,8 @@
         <Grid Grid.Row="6">
             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
             <TextBlock Style="{StaticResource SecondaryText}" Text="{Binding StatusText}" TextTrimming="CharacterEllipsis" />
-            <Button Grid.Column="1" Style="{StaticResource PrimaryButton}" Command="{Binding DownloadSelectedCommand}">
-                <StackPanel Orientation="Horizontal"><iconPacks:PackIconLucide Kind="Download" Width="15" Height="15" /><TextBlock Margin="7,0,0,0" Text="下载并载入" /></StackPanel>
+            <Button Grid.Column="1" Style="{StaticResource PrimaryButton}" Command="{Binding LoadSelectedCommand}">
+                <StackPanel Orientation="Horizontal"><iconPacks:PackIconLucide Kind="Play" Width="15" Height="15" /><TextBlock Margin="7,0,0,0" Text="载入播放" /></StackPanel>
             </Button>
         </Grid>
     </Grid>
