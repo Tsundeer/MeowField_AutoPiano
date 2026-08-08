@@ -10,7 +10,7 @@
         xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
         mc:Ignorable="d"
         Title="MeowField_AutoPiano"
-        Icon="/MeowField.App;component/Assets/MeowField_AutoPiano.ico"
+        Icon="Assets/MeowField_AutoPiano.ico"
         Width="1180" Height="760" MinWidth="1000" MinHeight="680"
         WindowStyle="None" ResizeMode="CanResize" AllowsTransparency="False"
         WindowStartupLocation="CenterScreen"

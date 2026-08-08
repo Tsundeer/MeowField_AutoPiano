@@ -94,6 +94,8 @@ public partial class App : System.Windows.Application
         try
         {
             _host?.Services.GetService<MainViewModel>()?.SaveAsync().GetAwaiter().GetResult();
+            _host?.Services.GetService<IGlobalHotkeyService>()?.Unregister();
+            _host?.StopAsync(TimeSpan.FromSeconds(3)).GetAwaiter().GetResult();
         }
         catch (Exception exception)
         {

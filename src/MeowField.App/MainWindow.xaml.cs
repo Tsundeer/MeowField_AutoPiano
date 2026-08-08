@@ -80,6 +80,7 @@ public partial class MainWindow : Window
     {
         _hotkeys.PlayPauseRequested -= OnPlayPauseRequested;
         _hotkeys.StopRequested -= OnStopRequested;
+        _hotkeys.Unregister();
     }
 
     private async void OnDrop(object sender, DragEventArgs e)
