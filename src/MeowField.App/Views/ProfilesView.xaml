@@ -3,7 +3,21 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <Grid Margin="24,20">
         <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="14" /><RowDefinition Height="1.2*" /><RowDefinition Height="14" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
-        <StackPanel><TextBlock Style="{StaticResource HeadingText}" Text="键位与预设" /><TextBlock Margin="0,5,0,0" Style="{StaticResource SecondaryText}" Text="编辑 MIDI 音符到游戏键位的映射，并管理可复用的播放参数" /></StackPanel>
+        <StackPanel>
+            <TextBlock Style="{StaticResource HeadingText}" Text="键位与预设" />
+            <TextBlock Margin="0,5,0,0" Style="{StaticResource SecondaryText}" Text="编辑 MIDI 音符到游戏键位的映射，并管理可复用的播放参数" />
+            <StackPanel Margin="0,10,0,0" Orientation="Horizontal">
+                <TextBlock Style="{StaticResource SecondaryText}" Text="当前：" />
+                <TextBlock Style="{StaticResource SecondaryText}">
+                    <TextBlock.Text>
+                        <MultiBinding Converter="{StaticResource InstrumentChoiceNameConverter}">
+                            <Binding Path="DataContext.SelectedInstrumentChoice" RelativeSource="{RelativeSource AncestorType=Window}" />
+                            <Binding Path="DataContext.IsEnglish" RelativeSource="{RelativeSource AncestorType=Window}" />
+                        </MultiBinding>
+                    </TextBlock.Text>
+                </TextBlock>
+            </StackPanel>
+        </StackPanel>
 
         <Border Grid.Row="2" Background="{DynamicResource Brush.Surface.Panel}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1" CornerRadius="6" Padding="18">
             <Grid>
@@ -51,16 +65,7 @@
             </Grid>
         </Border>
 
-        <Grid Grid.Row="4">
-            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="14" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-            <Border Background="{DynamicResource Brush.Surface.Panel}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1" CornerRadius="6" Padding="18">
-                <Grid><Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="12" /><RowDefinition Height="*" /><RowDefinition Height="12" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
-                    <TextBlock FontWeight="SemiBold" Text="游戏配置档案" />
-                    <ListBox Grid.Row="2" ItemsSource="{Binding GameProfiles}" SelectedItem="{Binding SelectedProfile}" DisplayMemberPath="Name" BorderThickness="0" />
-                    <Button Grid.Row="4" HorizontalAlignment="Left" Style="{StaticResource PrimaryButton}" Command="{Binding ApplyProfileCommand}">应用档案</Button>
-                </Grid>
-            </Border>
-            <Border Grid.Column="2" Background="{DynamicResource Brush.Surface.Panel}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1" CornerRadius="6" Padding="18">
+        <Border Grid.Row="4" Background="{DynamicResource Brush.Surface.Panel}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1" CornerRadius="6" Padding="18">
                 <Grid><Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="12" /><RowDefinition Height="Auto" /><RowDefinition Height="12" /><RowDefinition Height="*" /><RowDefinition Height="12" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
                     <TextBlock FontWeight="SemiBold" Text="参数预设" />
                     <Grid Grid.Row="2"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
@@ -70,7 +75,6 @@
                     <StackPanel Grid.Row="6" Orientation="Horizontal"><Button Style="{StaticResource PrimaryButton}" Command="{Binding ApplyPresetCommand}">应用预设</Button><Button Margin="8,0,0,0" Command="{Binding OverwritePresetCommand}">覆盖</Button><Button Margin="8,0,0,0" Command="{Binding DeletePresetCommand}">删除</Button></StackPanel>
                 </Grid>
             </Border>
-        </Grid>
         <TextBlock Grid.Row="5" Margin="0,14,0,0" Style="{StaticResource SecondaryText}"><TextBlock.Text><MultiBinding Converter="{StaticResource UiTextConverter}"><Binding Path="StatusText" /><Binding Path="DataContext.IsEnglish" RelativeSource="{RelativeSource AncestorType=Window}" /></MultiBinding></TextBlock.Text></TextBlock>
     </Grid>
 </UserControl>

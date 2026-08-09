@@ -113,6 +113,7 @@ public static class LocalizationService
         ["未绑定目标窗口"] = "No target window",
         ["主题"] = "Theme", ["设置"] = "Settings", ["语言"] = "Language",
         ["播放"] = "Playback", ["曲库"] = "Library", ["定时任务"] = "Scheduler", ["音频转谱"] = "Audio to MIDI", ["键位与预设"] = "Keys & Presets", ["日志与诊断"] = "Logs & Diagnostics",
+        ["当前："] = "Current: ",
         ["打开 MIDI"] = "Open MIDI", ["音符预览"] = "Note preview", ["音符"] = "notes", ["事件"] = "events", ["活动键位"] = "Active keys", ["虚拟键盘"] = "Virtual keyboard",
         ["播放参数"] = "Playback parameters", ["目标窗口"] = "Target window", ["刷新窗口"] = "Refresh windows", ["输入方式"] = "Input mode", ["乐器"] = "Instrument", ["乐器 / 档案"] = "Instrument / Profile", ["和弦处理"] = "Chord handling", ["速度"] = "Speed", ["转调"] = "Transpose", ["最大复音"] = "Max polyphony", ["链路补偿"] = "Link compensation", ["优先映射最近白键"] = "Prefer nearest white key", ["载入时自动移调"] = "Auto transpose on load", ["播放队列"] = "Play queue", ["自动下一首"] = "Auto play next", ["上一首"] = "Previous", ["下一首"] = "Next", ["移出队列"] = "Remove from queue", ["清空队列"] = "Clear queue", ["上移"] = "Move up", ["下移"] = "Move down", ["停止"] = "Stop",
         ["音域下限"] = "Range low", ["音域上限"] = "Range high", ["适配率"] = "Fit ratio",
