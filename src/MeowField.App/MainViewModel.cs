@@ -371,7 +371,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
             var quotedLauncher = launcherPath.Replace("%", "%%");
             var launcher = $"@echo off\r\n" +
                 "timeout /t 2 /nobreak >nul\r\n" +
-                $"\"{quotedInstaller}\" /VERYSILENT /SUPPRESSMSGBOXES /NORESTART\r\n" +
+                $"\"{quotedInstaller}\" /NORESTART\r\n" +
                 "set EXITCODE=%ERRORLEVEL%\r\n" +
                 $"del /f /q \"{quotedInstaller}\" >nul 2>&1\r\n" +
                 $"del /f /q \"{quotedLauncher}\" >nul 2>&1\r\n" +
