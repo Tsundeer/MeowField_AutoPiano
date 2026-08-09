@@ -1,4 +1,6 @@
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
+using System.ComponentModel;
 using System.IO;
 using System.Diagnostics;
 using System.Net.Http;
@@ -33,6 +35,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
     private (int Low, int High) _drumRange = (0, 127);
     private (int Low, int High) _microphoneRange = (NoteMapping.MicrophoneMinMidi, NoteMapping.MicrophoneMaxMidi);
     private bool _applyingConfig;
+    private bool _profileApplied;
+    private bool _syncingInstrumentChoice;
     private bool _timelineDragging;
 
     public MainViewModel(
@@ -64,10 +68,32 @@ public partial class MainViewModel : ObservableObject, IDisposable
         Library.QueueRequested += (_, entry) => AddToQueue(entry);
         OnlineLibrary.MidiLoaded += (_, payload) => _ = LoadOnlineMidiAsync(payload);
         Converter.MidiReady += (_, path) => _ = LoadMidiAsync(path);
-        Profiles.ConfigSelected += (_, config) => { ApplyConfig(config); Profiles.RefreshKeyMappings(config); };
+        Profiles.ConfigSelected += (_, config) =>
+        {
+            var profile = Profiles.SelectedProfile;
+            if (profile is not null && ReferenceEquals(profile.Config, config))
+            {
+                ApplyGameProfile(profile);
+            }
+            else
+            {
+                _profileApplied = false;
+                Profiles.ClearSelectedProfile();
+                ApplyConfig(config);
+                Profiles.RefreshKeyMappings(config);
+                SyncSelectedInstrumentChoice();
+            }
+        };
         Schedule.Due += (_, scheduleToPlay) => _ = OnScheduleDueAsync(scheduleToPlay);
         Profiles.CurrentConfigProvider = CreateConfig;
         Profiles.RefreshKeyMappings(CreateConfig());
+        foreach (var kind in Enum.GetValues<InstrumentKind>())
+        {
+            InstrumentChoices.Add(new InstrumentChoice(kind, null));
+        }
+        selectedInstrumentChoice = InstrumentChoices.FirstOrDefault(choice => choice.IsGeneric && choice.Kind == InstrumentKind.Piano);
+        Profiles.GameProfiles.CollectionChanged += OnGameProfilesCollectionChanged;
+        Profiles.PropertyChanged += OnProfilesPropertyChanged;
         RebuildKeyboardPreview(CreateConfig());
         Schedule.MidiPathProvider = () => _midi?.SourcePath;
         _playback.SnapshotChanged += OnSnapshotChanged;
@@ -87,6 +113,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
     public ObservableCollection<PlaylistItem> Queue { get; } = [];
     public IReadOnlyList<InputMode> InputModes { get; } = Enum.GetValues<InputMode>();
     public IReadOnlyList<InstrumentKind> Instruments { get; } = Enum.GetValues<InstrumentKind>();
+    public ObservableCollection<InstrumentChoice> InstrumentChoices { get; } = [];
+    [ObservableProperty] private InstrumentChoice? selectedInstrumentChoice;
     public IReadOnlyList<ChordMode> ChordModes { get; } = Enum.GetValues<ChordMode>();
     public ObservableCollection<KeyboardKeyState> KeyboardKeys { get; } = [];
     [ObservableProperty] private string keyboardCountText = "21 键";
@@ -133,6 +161,10 @@ public partial class MainViewModel : ObservableObject, IDisposable
     [ObservableProperty] private string updateStatus = "尚未检查更新";
     [ObservableProperty] private string latestVersion = "";
     [ObservableProperty] private string releaseUrl = "https://github.com/Tsundeer/MeowField_AutoPiano/releases";
+    [ObservableProperty] private double updateProgress;
+    [ObservableProperty] private bool isUpdateDownloading;
+    [ObservableProperty] private bool isUpdateProgressIndeterminate;
+    [ObservableProperty] private string updateProgressText = "";
 
     public string PlayPauseLabel => IsEnglish ? (PlaybackState == PlaybackState.Playing ? "Pause" : "Play") : (PlaybackState == PlaybackState.Playing ? "暂停" : "播放");
     public string LanguageLabel => IsEnglish ? "中" : "EN";
@@ -361,9 +393,26 @@ public partial class MainViewModel : ObservableObject, IDisposable
             using (var download = await client.GetAsync(assetUrl, HttpCompletionOption.ResponseHeadersRead))
             {
                 download.EnsureSuccessStatusCode();
+                var totalBytes = download.Content.Headers.ContentLength ?? 0;
+                IsUpdateDownloading = true;
+                IsUpdateProgressIndeterminate = totalBytes <= 0;
+                UpdateProgress = 0;
+                UpdateProgressText = FormatUpdateProgress(0, totalBytes);
                 await using var source = await download.Content.ReadAsStreamAsync();
                 await using var destination = File.Create(installerPath);
-                await source.CopyToAsync(destination);
+                var buffer = new byte[81920];
+                long read = 0;
+                int count;
+                while ((count = await source.ReadAsync(buffer)) > 0)
+                {
+                    await destination.WriteAsync(buffer.AsMemory(0, count));
+                    read += count;
+                    if (totalBytes > 0)
+                    {
+                        UpdateProgress = Math.Min(100, read * 100d / totalBytes);
+                        UpdateProgressText = FormatUpdateProgress(read, totalBytes);
+                    }
+                }
             }
 
             var launcherPath = Path.Combine(updateDirectory, "apply-update.cmd");
@@ -394,6 +443,10 @@ public partial class MainViewModel : ObservableObject, IDisposable
             }
             UpdateStatus = IsEnglish ? $"Update failed: {exception.Message}" : $"更新失败：{exception.Message}";
         }
+        finally
+        {
+            IsUpdateDownloading = false;
+        }
     }
 
     private static async Task<string?> FindSetupAssetAsync(HttpClient client, string tag)
@@ -421,6 +474,12 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
 
         return fallback;
+    }
+
+    private static string FormatUpdateProgress(long downloaded, long total)
+    {
+        var downloadedMb = downloaded / 1024d / 1024d;
+        return total <= 0 ? $"{downloadedMb:0.0} MB" : $"{downloadedMb:0.0} MB / {total / 1024d / 1024d:0.0} MB";
     }
 
     [RelayCommand]
@@ -493,17 +552,23 @@ public partial class MainViewModel : ObservableObject, IDisposable
             AutoTranspose = config.AutoTranspose;
             LinkLatencyMs = config.LinkLatencyMs;
             CustomKeyMap = config.CustomKeyMap;
-            SaveInstrumentRange(config.Instrument, config.NoteRangeLow, config.NoteRangeHigh);
+            if (!_profileApplied)
+            {
+                SaveInstrumentRange(config.Instrument, config.NoteRangeLow, config.NoteRangeHigh);
+            }
         }
         finally
         {
             _applyingConfig = false;
         }
-        switch (Instrument)
+        if (!_profileApplied)
         {
-            case InstrumentKind.Piano: _pianoKeyMap = CustomKeyMap; break;
-            case InstrumentKind.Drums: _drumKeyMap = CustomKeyMap; break;
-            case InstrumentKind.Microphone: _microphoneKeyMap = CustomKeyMap; break;
+            switch (Instrument)
+            {
+                case InstrumentKind.Piano: _pianoKeyMap = CustomKeyMap; break;
+                case InstrumentKind.Drums: _drumKeyMap = CustomKeyMap; break;
+                case InstrumentKind.Microphone: _microphoneKeyMap = CustomKeyMap; break;
+            }
         }
         if (_midi is not null)
         {
@@ -609,6 +674,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     partial void OnInstrumentChanging(InstrumentKind oldValue, InstrumentKind newValue)
     {
+        if (_profileApplied) return;
         switch (oldValue)
         {
             case InstrumentKind.Piano: _pianoKeyMap = CustomKeyMap; break;
@@ -629,6 +695,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         };
         if (!_applyingConfig)
         {
+            _profileApplied = false;
             var range = value switch
             {
                 InstrumentKind.Piano => _pianoRange,
@@ -654,9 +721,137 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     private void InvalidateProfileSelection()
     {
-        if (_applyingConfig) return;
+        if (_applyingConfig || !_profileApplied) return;
+        _profileApplied = false;
         Profiles.ClearSelectedProfile();
+        Profiles.RefreshKeyMappings(CreateConfig());
     }
+
+    partial void OnSelectedInstrumentChoiceChanged(InstrumentChoice? value)
+    {
+        if (_syncingInstrumentChoice || value is null) return;
+        if (value.Profile is { } profile)
+        {
+            ApplyGameProfile(profile);
+        }
+        else
+        {
+            ApplyGenericInstrument(value.Kind);
+        }
+    }
+
+    private void ApplyGameProfile(GameProfile profile)
+    {
+        if (Profiles.SelectedProfile?.Id != profile.Id)
+        {
+            Profiles.SelectProfile(profile);
+        }
+        _profileApplied = true;
+        ApplyConfig(profile.Config);
+        Profiles.RefreshKeyMappings(profile.Config);
+        StatusText = $"已应用：{profile.Name}";
+        ScheduleSettingsSave();
+    }
+
+    private void ApplyGenericInstrument(InstrumentKind kind)
+    {
+        Profiles.ClearSelectedProfile();
+        if (Instrument != kind)
+        {
+            Instrument = kind;
+            _profileApplied = false;
+        }
+        else
+        {
+            _profileApplied = false;
+            CustomKeyMap = GetSavedKeyMap(kind);
+            var range = GetSavedRange(kind);
+            NoteRangeLow = range.Low;
+            NoteRangeHigh = range.High;
+            if (_midi is not null)
+            {
+                _playback.Load(_midi, CreateConfig());
+                EventCount = PlaybackEventBuilder.Build(_midi.Notes, CreateConfig()).Count;
+                OnPropertyChanged(nameof(EventCountLabel));
+                UpdateFitRatios();
+            }
+            RebuildKeyboardPreview(CreateConfig());
+            Profiles.RefreshKeyMappings(CreateConfig());
+        }
+        SyncSelectedInstrumentChoice();
+        ScheduleSettingsSave();
+    }
+
+    private void OnGameProfilesCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        if (e.Action == NotifyCollectionChangedAction.Reset)
+        {
+            for (var index = InstrumentChoices.Count - 1; index >= 0; index--)
+            {
+                if (!InstrumentChoices[index].IsGeneric) InstrumentChoices.RemoveAt(index);
+            }
+        }
+        else if (e.NewItems is not null)
+        {
+            foreach (GameProfile profile in e.NewItems)
+            {
+                InstrumentChoices.Add(new InstrumentChoice(profile.Config.Instrument, profile));
+            }
+        }
+        else if (e.OldItems is not null)
+        {
+            var removed = e.OldItems.Cast<GameProfile>().Select(profile => profile.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            for (var index = InstrumentChoices.Count - 1; index >= 0; index--)
+            {
+                var choice = InstrumentChoices[index];
+                if (!choice.IsGeneric && removed.Contains(choice.Profile!.Id)) InstrumentChoices.RemoveAt(index);
+            }
+        }
+        SyncSelectedInstrumentChoice();
+    }
+
+    private void OnProfilesPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(ProfilesViewModel.SelectedProfile))
+        {
+            SyncSelectedInstrumentChoice();
+        }
+    }
+
+    private void SyncSelectedInstrumentChoice()
+    {
+        _syncingInstrumentChoice = true;
+        try
+        {
+            SelectedInstrumentChoice = Profiles.SelectedProfile is { } profile
+                ? InstrumentChoices.FirstOrDefault(choice => choice.Profile?.Id == profile.Id) ?? FindGenericChoice(Instrument)
+                : FindGenericChoice(Instrument);
+        }
+        finally
+        {
+            _syncingInstrumentChoice = false;
+        }
+    }
+
+    private InstrumentChoice? FindGenericChoice(InstrumentKind kind) =>
+        InstrumentChoices.FirstOrDefault(choice => choice.IsGeneric && choice.Kind == kind)
+        ?? InstrumentChoices.FirstOrDefault(choice => choice.IsGeneric);
+
+    private IReadOnlyDictionary<int, string>? GetSavedKeyMap(InstrumentKind kind) => kind switch
+    {
+        InstrumentKind.Piano => _pianoKeyMap,
+        InstrumentKind.Drums => _drumKeyMap,
+        InstrumentKind.Microphone => _microphoneKeyMap,
+        _ => null,
+    };
+
+    private (int Low, int High) GetSavedRange(InstrumentKind kind) => kind switch
+    {
+        InstrumentKind.Piano => _pianoRange,
+        InstrumentKind.Drums => _drumRange,
+        InstrumentKind.Microphone => _microphoneRange,
+        _ => _pianoRange,
+    };
 
     private void SaveInstrumentRange(InstrumentKind instrumentKind, int low, int high)
     {

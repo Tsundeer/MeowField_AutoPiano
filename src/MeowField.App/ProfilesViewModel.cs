@@ -120,6 +120,12 @@ public partial class ProfilesViewModel : ObservableObject
         SelectedProfile = GameProfiles.FirstOrDefault(profile => string.Equals(profile.Id, id, StringComparison.OrdinalIgnoreCase));
     }
 
+    public void SelectProfile(GameProfile profile)
+    {
+        _pendingProfileId = profile.Id;
+        SelectedProfile = profile;
+    }
+
     public void ClearSelectedProfile()
     {
         _pendingProfileId = null;

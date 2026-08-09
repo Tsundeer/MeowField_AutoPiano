@@ -7,6 +7,7 @@
             <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
             <local:InverseBooleanConverter x:Key="InverseBooleanConverter" />
             <local:UiTextConverter x:Key="UiTextConverter" />
+            <local:InstrumentChoiceNameConverter x:Key="InstrumentChoiceNameConverter" />
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="Themes/Light.xaml" />
                 <ResourceDictionary Source="Themes/Controls.xaml" />

@@ -19,6 +19,7 @@ public partial class MainViewModel
             _drumKeyMap = settings.DrumKeyMap;
             _microphoneKeyMap = settings.MicrophoneKeyMap;
             ApplyConfig(settings.Mapping);
+            _profileApplied = settings.SelectedGameProfileId is not null;
             AutoTranspose = settings.Mapping.AutoTranspose;
             AutoPlayNext = settings.AutoPlayNext;
             Profiles.SelectProfileById(settings.SelectedGameProfileId);
@@ -50,9 +51,9 @@ public partial class MainViewModel
                 Locale = IsEnglish ? "en-US" : "zh-CN",
                 Theme = IsDarkTheme ? "dark" : "light",
                 Mapping = CreateConfig(),
-                PianoKeyMap = Instrument == InstrumentKind.Piano ? CustomKeyMap : _pianoKeyMap,
-                DrumKeyMap = Instrument == InstrumentKind.Drums ? CustomKeyMap : _drumKeyMap,
-                MicrophoneKeyMap = Instrument == InstrumentKind.Microphone ? CustomKeyMap : _microphoneKeyMap,
+                PianoKeyMap = _profileApplied ? _pianoKeyMap : Instrument == InstrumentKind.Piano ? CustomKeyMap : _pianoKeyMap,
+                DrumKeyMap = _profileApplied ? _drumKeyMap : Instrument == InstrumentKind.Drums ? CustomKeyMap : _drumKeyMap,
+                MicrophoneKeyMap = _profileApplied ? _microphoneKeyMap : Instrument == InstrumentKind.Microphone ? CustomKeyMap : _microphoneKeyMap,
                 PianoTransPath = Converter.ConfiguredExecutablePath,
                 AutoPlayNext = AutoPlayNext,
                 SelectedGameProfileId = Profiles.SelectedProfile?.Id,

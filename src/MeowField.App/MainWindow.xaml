@@ -212,13 +212,13 @@
                                 </DataTemplate>
                             </ComboBox.ItemTemplate>
                         </ComboBox>
-                        <TextBlock Margin="0,14,0,6" Style="{StaticResource SecondaryText}" Text="乐器" />
-                        <ComboBox ItemsSource="{Binding Instruments}" SelectedItem="{Binding Instrument}">
+                        <TextBlock Margin="0,14,0,6" Style="{StaticResource SecondaryText}" Text="乐器 / 档案" />
+                        <ComboBox ItemsSource="{Binding InstrumentChoices}" SelectedItem="{Binding SelectedInstrumentChoice}">
                             <ComboBox.ItemTemplate>
                                 <DataTemplate>
                                     <TextBlock>
                                         <TextBlock.Text>
-                                            <MultiBinding Converter="{StaticResource UiTextConverter}">
+                                            <MultiBinding Converter="{StaticResource InstrumentChoiceNameConverter}">
                                                 <Binding />
                                                 <Binding Path="DataContext.IsEnglish" RelativeSource="{RelativeSource AncestorType=Window}" />
                                             </MultiBinding>
