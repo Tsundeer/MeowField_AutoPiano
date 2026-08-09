@@ -68,6 +68,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         Schedule.Due += (_, scheduleToPlay) => _ = OnScheduleDueAsync(scheduleToPlay);
         Profiles.CurrentConfigProvider = CreateConfig;
         Profiles.RefreshKeyMappings(CreateConfig());
+        RebuildKeyboardPreview(CreateConfig());
         Schedule.MidiPathProvider = () => _midi?.SourcePath;
         _playback.SnapshotChanged += OnSnapshotChanged;
         IsAdministrator = windowCatalog.IsAdministrator;
@@ -87,9 +88,10 @@ public partial class MainViewModel : ObservableObject, IDisposable
     public IReadOnlyList<InputMode> InputModes { get; } = Enum.GetValues<InputMode>();
     public IReadOnlyList<InstrumentKind> Instruments { get; } = Enum.GetValues<InstrumentKind>();
     public IReadOnlyList<ChordMode> ChordModes { get; } = Enum.GetValues<ChordMode>();
-    public ObservableCollection<KeyboardKeyState> KeyboardKeys { get; } = new(
-        KeyboardLayout.PianoPreviewKeys
-            .Select(key => new KeyboardKeyState(key)));
+    public ObservableCollection<KeyboardKeyState> KeyboardKeys { get; } = [];
+    [ObservableProperty] private string keyboardCountText = "21 键";
+    [ObservableProperty] private int keyboardColumns = 7;
+    [ObservableProperty] private int keyboardRows = 3;
 
     [ObservableProperty] private WindowTarget? selectedWindow;
     [ObservableProperty] private string? targetProcessName;
@@ -509,6 +511,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
             EventCount = PlaybackEventBuilder.Build(_midi.Notes, CreateConfig()).Count;
             UpdateFitRatios();
         }
+        RebuildKeyboardPreview(CreateConfig());
     }
 
     private async Task OnScheduleDueAsync(ScheduledPlayback schedule)
@@ -628,6 +631,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 OnPropertyChanged(nameof(EventCountLabel));
                 UpdateFitRatios();
             }
+            RebuildKeyboardPreview(CreateConfig());
         }
         ScheduleSettingsSave();
     }
@@ -737,6 +741,53 @@ public partial class MainViewModel : ObservableObject, IDisposable
         if (error.Contains("No foreground window", StringComparison.OrdinalIgnoreCase))
             return "未找到前台窗口，请切换到目标游戏后重试。";
         return error;
+    }
+
+    private void RebuildKeyboardPreview(MappingConfig config)
+    {
+        var active = KeyboardKeys.Where(key => key.IsActive).Select(key => key.Label).ToHashSet(StringComparer.Ordinal);
+        var labels = config.Instrument switch
+        {
+            InstrumentKind.Drums => DistinctPreviewKeys(config.CustomKeyMap, NoteMapping.DrumKeys),
+            InstrumentKind.Microphone => DistinctPreviewKeys(config.CustomKeyMap, MicrophoneDefaults),
+            _ => DistinctPreviewKeys(config.CustomKeyMap, NoteMapping.PianoKeys),
+        };
+
+        KeyboardKeys.Clear();
+        foreach (var label in labels)
+        {
+            KeyboardKeys.Add(new KeyboardKeyState(label) { IsActive = active.Contains(label) });
+        }
+
+        KeyboardCountText = $"{KeyboardKeys.Count} 键";
+        KeyboardColumns = KeyboardKeys.Count switch
+        {
+            <= 10 => 5,
+            <= 15 => 5,
+            <= 21 => 7,
+            <= 36 => 9,
+            _ => 10,
+        };
+        KeyboardRows = (KeyboardKeys.Count + KeyboardColumns - 1) / KeyboardColumns;
+    }
+
+    private static IReadOnlyDictionary<int, string> MicrophoneDefaults { get; } =
+        Enumerable.Range(NoteMapping.MicrophoneMinMidi, NoteMapping.MicrophoneKeys.Count)
+            .ToDictionary(note => note, note => NoteMapping.MicrophoneKeys[note - NoteMapping.MicrophoneMinMidi]);
+
+    private static IReadOnlyList<string> DistinctPreviewKeys(IReadOnlyDictionary<int, string>? custom, IReadOnlyDictionary<int, string> defaults)
+    {
+        var map = custom ?? defaults;
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        var result = new List<string>();
+        foreach (var pair in map.OrderBy(pair => pair.Key))
+        {
+            if (!string.IsNullOrWhiteSpace(pair.Value) && seen.Add(pair.Value))
+            {
+                result.Add(pair.Value);
+            }
+        }
+        return result;
     }
 }
 

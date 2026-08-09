@@ -1,8 +1,8 @@
-# MeowField_AutoPiano
+﻿# MeowField_AutoPiano
 
 MeowField_AutoPiano 是一款 Windows 自动弹琴软件：加载 MIDI 后绑定目标窗口即可自动演奏，也可以把普通音频文件一键转换成 MIDI 谱。软件专为《开放空间》PC 端乐器玩法适配，支持钢琴、架子鼓、麦克风等乐器的自动演奏。
 
-当前版本：**2.2.5**（2.0 为正式版基线）  
+当前版本：**2.2.6**（2.0 为正式版基线）  
 作者 / 软件署名：**薮猫**  
 项目主页：<https://github.com/Tsundeer/MeowField_AutoPiano>  
 下载：GitHub [Releases](https://github.com/Tsundeer/MeowField_AutoPiano/releases)

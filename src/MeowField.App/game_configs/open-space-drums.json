@@ -1,0 +1,26 @@
+{
+  "id": "open-space-drums",
+  "name": "开放空间 - 架子鼓",
+  "instrument": "drums",
+  "midi_channel_filter": 9,
+  "transpose_semitones": 0,
+  "speed": 1.0,
+  "max_polyphony": 10,
+  "chord_mode": "off",
+  "keep_melody_top_note": false,
+  "chord_cluster_window_ms": 40,
+  "auto_transpose": false,
+  "link_latency_ms": 0,
+  "custom_key_map": {
+    "36": "E",
+    "38": "W",
+    "42": "1",
+    "43": "R",
+    "46": "Q",
+    "47": "4",
+    "48": "3",
+    "49": "2",
+    "51": "5",
+    "57": "T"
+  }
+}

@@ -7,7 +7,7 @@
 
         <Border Grid.Row="2" Background="{DynamicResource Brush.Surface.Panel}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1" CornerRadius="6" Padding="18">
             <Grid>
-                <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="10" /><RowDefinition Height="*" /><RowDefinition Height="10" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+                <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="10" /><RowDefinition Height="Auto" /><RowDefinition Height="8" /><RowDefinition Height="*" /><RowDefinition Height="10" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
                 <Grid>
                     <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                     <StackPanel><TextBlock FontWeight="SemiBold" Text="自定义键位映射" /><TextBlock Margin="0,4,0,0" Style="{StaticResource SecondaryText}" Text="留空使用默认映射；同一个游戏键可以对应多个 MIDI 音符" /></StackPanel>
@@ -17,14 +17,37 @@
                         <Button Margin="8,0,0,0" Command="{Binding ResetKeyMapCommand}">恢复默认</Button>
                     </StackPanel>
                 </Grid>
-                <DataGrid Grid.Row="2" ItemsSource="{Binding KeyMappings}" AutoGenerateColumns="False" CanUserAddRows="False" HeadersVisibility="Column" RowHeight="32" GridLinesVisibility="Horizontal">
+                <Grid Grid.Row="2">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                    <TextBox Height="30" Padding="9,4" VerticalContentAlignment="Center" Text="{Binding KeyFilter, UpdateSourceTrigger=PropertyChanged}" ToolTip="按音名、MIDI 号或游戏键搜索" />
+                    <CheckBox Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center" IsChecked="{Binding ShowUnmappedOnly}" Content="仅看未映射" />
+                    <TextBlock Grid.Column="2" Margin="12,0,0,0" VerticalAlignment="Center" Style="{StaticResource SecondaryText}" Text="{Binding MappedCountText}" />
+                </Grid>
+                <DataGrid x:Name="KeyMappingGrid" Grid.Row="4" ItemsSource="{Binding FilteredKeyMappings}" AutoGenerateColumns="False" CanUserAddRows="False" HeadersVisibility="Column" RowHeight="32" GridLinesVisibility="Horizontal" SelectionUnit="FullRow">
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="MIDI" Binding="{Binding Note}" IsReadOnly="True" Width="80" />
-                        <DataGridTextColumn Header="音名" Binding="{Binding NoteName}" IsReadOnly="True" Width="100" />
+                        <DataGridTemplateColumn Header="状态" Width="80">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <Ellipse x:Name="StatusDot" Width="8" Height="8" Fill="#E5484D" />
+                                        <TextBlock x:Name="StatusLabel" Margin="6,0,0,0" Text="未映射" Foreground="#E5484D" FontSize="12" />
+                                    </StackPanel>
+                                    <DataTemplate.Triggers>
+                                        <DataTrigger Binding="{Binding IsMapped}" Value="True">
+                                            <Setter TargetName="StatusDot" Property="Fill" Value="#30A46C" />
+                                            <Setter TargetName="StatusLabel" Property="Text" Value="已映射" />
+                                            <Setter TargetName="StatusLabel" Property="Foreground" Value="#30A46C" />
+                                        </DataTrigger>
+                                    </DataTemplate.Triggers>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTextColumn Header="MIDI" Binding="{Binding Note}" IsReadOnly="True" Width="70" />
+                        <DataGridTextColumn Header="音名" Binding="{Binding NoteName}" IsReadOnly="True" Width="90" />
                         <DataGridTextColumn Header="游戏键" Binding="{Binding Key, UpdateSourceTrigger=PropertyChanged}" Width="*" />
                     </DataGrid.Columns>
                 </DataGrid>
-                <TextBlock Grid.Row="4" Style="{StaticResource SecondaryText}" Text="支持单字符键位；应用后会立即重新生成当前 MIDI 的播放事件" />
+                <TextBlock Grid.Row="6" Style="{StaticResource SecondaryText}" Text="选中一行后直接按键盘即可录入（支持 SHIFT / CTRL 组合，Delete 清除）；应用后会立即重新生成播放事件" />
             </Grid>
         </Border>
 

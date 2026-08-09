@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Windows;
+using System.Windows.Data;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MeowField.Application;
@@ -17,17 +18,22 @@ public partial class ProfilesViewModel : ObservableObject
     {
         _profiles = profiles;
         _store = store;
+        FilteredKeyMappings = new ListCollectionView(KeyMappings) { Filter = RowMatchesFilter };
         _ = InitializeAsync();
     }
 
     public ObservableCollection<GameProfile> GameProfiles { get; } = [];
     public ObservableCollection<Preset> Presets { get; } = [];
     public ObservableCollection<KeyMappingRow> KeyMappings { get; } = [];
+    public ListCollectionView FilteredKeyMappings { get; }
 
     [ObservableProperty] private GameProfile? selectedProfile;
     [ObservableProperty] private Preset? selectedPreset;
     [ObservableProperty] private string presetName = "";
     [ObservableProperty] private string statusText = "正在加载配置档案...";
+    [ObservableProperty] private string keyFilter = "";
+    [ObservableProperty] private bool showUnmappedOnly;
+    [ObservableProperty] private string mappedCountText = "";
 
     public Func<MappingConfig>? CurrentConfigProvider { get; set; }
     public event EventHandler<MappingConfig>? ConfigSelected;
@@ -61,6 +67,35 @@ public partial class ProfilesViewModel : ObservableObject
         ConfigSelected?.Invoke(this, current with { CustomKeyMap = null });
         PopulateKeyMappings(current with { CustomKeyMap = null });
         StatusText = current.Instrument == InstrumentKind.Drums ? "已恢复 GM 架子鼓映射" : "已恢复默认键位映射";
+    }
+
+    partial void OnKeyFilterChanged(string value) => RefreshKeyMappingFilter();
+    partial void OnShowUnmappedOnlyChanged(bool value) => RefreshKeyMappingFilter();
+
+    public void RefreshKeyMappingFilter()
+    {
+        FilteredKeyMappings.Refresh();
+        MappedCountText = $"已映射 {KeyMappings.Count(row => row.IsMapped)} / {KeyMappings.Count}";
+    }
+
+    private bool RowMatchesFilter(object item)
+    {
+        if (item is not KeyMappingRow row)
+        {
+            return false;
+        }
+        if (ShowUnmappedOnly && row.IsMapped)
+        {
+            return false;
+        }
+        if (string.IsNullOrWhiteSpace(KeyFilter))
+        {
+            return true;
+        }
+        var filter = KeyFilter.Trim();
+        return row.NoteName.Contains(filter, StringComparison.OrdinalIgnoreCase)
+            || row.Note.ToString().Contains(filter, StringComparison.OrdinalIgnoreCase)
+            || row.Key.Contains(filter, StringComparison.OrdinalIgnoreCase);
     }
 
     private async Task InitializeAsync()
@@ -162,6 +197,7 @@ public partial class ProfilesViewModel : ObservableObject
             var key = config.CustomKeyMap?.GetValueOrDefault(note) ?? defaults.GetValueOrDefault(note) ?? "";
             KeyMappings.Add(new KeyMappingRow(note, MidiNoteName(note), key));
         }
+        RefreshKeyMappingFilter();
     }
 
     private static string MidiNoteName(int note)
@@ -175,5 +211,8 @@ public partial class KeyMappingRow(int note, string noteName, string key) : Obse
 {
     public int Note { get; } = note;
     public string NoteName { get; } = noteName;
+    public bool IsMapped => !string.IsNullOrWhiteSpace(Key);
     [ObservableProperty] private string key = key;
+
+    partial void OnKeyChanged(string value) => OnPropertyChanged(nameof(IsMapped));
 }

@@ -150,9 +150,13 @@
                 <Border Grid.Row="4" Background="{DynamicResource Brush.Surface.Panel}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1" CornerRadius="6" Padding="14">
                     <Grid>
                         <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="10" /><RowDefinition Height="*" /></Grid.RowDefinitions>
-                        <TextBlock FontWeight="SemiBold" Text="虚拟键盘" />
+                        <Grid>
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                            <TextBlock FontWeight="SemiBold" Text="虚拟键盘" />
+                            <TextBlock Grid.Column="1" Style="{StaticResource SecondaryText}" Text="{Binding KeyboardCountText}" />
+                        </Grid>
                         <ItemsControl Grid.Row="2" ItemsSource="{Binding KeyboardKeys}">
-                            <ItemsControl.ItemsPanel><ItemsPanelTemplate><UniformGrid Rows="3" Columns="7" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemsPanel><ItemsPanelTemplate><UniformGrid Rows="{Binding KeyboardRows}" Columns="{Binding KeyboardColumns}" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <Border Margin="2" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1" CornerRadius="3">

@@ -1,0 +1,18 @@
+{
+  "id": "open-space-piano",
+  "name": "开放空间 - 钢琴",
+  "instrument": "piano",
+  "midi_channel_filter": null,
+  "note_range_low": 48,
+  "note_range_high": 83,
+  "prefer_nearest_white": true,
+  "transpose_semitones": 0,
+  "speed": 1.0,
+  "max_polyphony": 10,
+  "chord_mode": "prefer",
+  "keep_melody_top_note": true,
+  "chord_cluster_window_ms": 40,
+  "auto_transpose": true,
+  "link_latency_ms": 0,
+  "custom_key_map": null
+}
