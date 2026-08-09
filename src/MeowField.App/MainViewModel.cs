@@ -2,7 +2,7 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Diagnostics;
 using System.Net.Http;
-using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -314,13 +314,26 @@ public partial class MainViewModel : ObservableObject, IDisposable
         string? installerPath = null;
         try
         {
+            string? tag = null;
             using var client = new HttpClient { Timeout = TimeSpan.FromMinutes(5) };
             client.DefaultRequestHeaders.UserAgent.ParseAdd($"MeowField-AutoPiano/{CurrentVersion}");
-            using var response = await client.GetAsync("https://api.github.com/repos/Tsundeer/MeowField_AutoPiano/releases/latest");
-            response.EnsureSuccessStatusCode();
+            // 不走 GitHub API（未认证会被 403 限流），改用 releases/latest 的 302 重定向获取最新版本。
+            using (var response = await client.GetAsync(
+                       "https://github.com/Tsundeer/MeowField_AutoPiano/releases/latest",
+                       HttpCompletionOption.ResponseHeadersRead))
+            {
+                response.EnsureSuccessStatusCode();
+                var latestUri = response.RequestMessage?.RequestUri;
+                if (latestUri is null ||
+                    !latestUri.AbsolutePath.Contains("/releases/tag/", StringComparison.OrdinalIgnoreCase))
+                {
+                    UpdateStatus = IsEnglish ? "Unable to read the latest release." : "无法获取最新版本信息。";
+                    return;
+                }
 
-            using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-            var tag = document.RootElement.TryGetProperty("tag_name", out var tagElement) ? tagElement.GetString() : null;
+                tag = Uri.UnescapeDataString(Path.GetFileName(latestUri.AbsolutePath.TrimEnd('/')));
+            }
+
             var comparison = CompareVersions(tag, CurrentVersion);
             if (comparison <= 0)
             {
@@ -329,23 +342,15 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 return;
             }
 
-            var asset = document.RootElement.TryGetProperty("assets", out var assets)
-                ? assets.EnumerateArray().FirstOrDefault(item =>
-                    item.TryGetProperty("name", out var name) &&
-                    name.GetString()?.EndsWith("Setup.exe", StringComparison.OrdinalIgnoreCase) == true)
-                : default;
-            var assetName = asset.ValueKind == JsonValueKind.Object && asset.TryGetProperty("name", out var assetNameElement)
-                ? assetNameElement.GetString()
-                : null;
-            var assetUrl = asset.ValueKind == JsonValueKind.Object && asset.TryGetProperty("browser_download_url", out var assetUrlElement)
-                ? assetUrlElement.GetString()
-                : null;
-            if (string.IsNullOrWhiteSpace(assetName) || string.IsNullOrWhiteSpace(assetUrl))
+            var assetName = await FindSetupAssetAsync(client, tag);
+            if (string.IsNullOrWhiteSpace(assetName))
             {
                 UpdateStatus = IsEnglish ? "The latest setup installer was not found." : "最新版本没有找到安装包。";
                 return;
             }
 
+            var assetUrl = $"https://github.com/Tsundeer/MeowField_AutoPiano/releases/download/" +
+                           $"{Uri.EscapeDataString(tag)}/{Uri.EscapeDataString(assetName)}";
             LatestVersion = tag ?? string.Empty;
             UpdateStatus = IsEnglish ? $"Downloading {tag}..." : $"正在下载 {tag} 安装包...";
             var updateDirectory = Path.Combine(Path.GetTempPath(), "MeowField_AutoPiano", "updates");
@@ -387,6 +392,33 @@ public partial class MainViewModel : ObservableObject, IDisposable
             }
             UpdateStatus = IsEnglish ? $"Update failed: {exception.Message}" : $"更新失败：{exception.Message}";
         }
+    }
+
+    private static async Task<string?> FindSetupAssetAsync(HttpClient client, string tag)
+    {
+        const string repository = "Tsundeer/MeowField_AutoPiano";
+        var fallback = $"MeowField_AutoPiano-{NormalizeVersion(tag)}-win-x64-Setup.exe";
+        var assetPage = $"https://github.com/{repository}/releases/expanded_assets/{Uri.EscapeDataString(tag)}";
+        using var response = await client.GetAsync(assetPage);
+        if (!response.IsSuccessStatusCode)
+        {
+            return fallback;
+        }
+
+        var html = await response.Content.ReadAsStringAsync();
+        var pattern = $"href=\"/{repository}/releases/download/{Regex.Escape(tag)}/(?<asset>[^\"/?#]+)\"";
+        for (var match = Regex.Match(html, pattern, RegexOptions.IgnoreCase);
+             match.Success;
+             match = match.NextMatch())
+        {
+            var name = Uri.UnescapeDataString(match.Groups["asset"].Value);
+            if (name.EndsWith("Setup.exe", StringComparison.OrdinalIgnoreCase))
+            {
+                return name;
+            }
+        }
+
+        return fallback;
     }
 
     [RelayCommand]
@@ -499,6 +531,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(IsProfilesVisible));
         OnPropertyChanged(nameof(IsDiagnosticsVisible));
         OnPropertyChanged(nameof(IsSettingsVisible));
+        if (value == "online-library") _ = OnlineLibrary.EnsureLoadedAsync();
         if (System.Windows.Application.Current?.MainWindow is { } window)
         {
             window.Dispatcher.BeginInvoke(() => LocalizationService.Apply(window, IsEnglish));

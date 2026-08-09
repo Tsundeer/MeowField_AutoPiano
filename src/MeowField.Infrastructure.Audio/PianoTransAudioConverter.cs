@@ -64,6 +64,7 @@ public sealed class PianoTransAudioConverter : IAudioConverter
         var expectedMidi = Path.Combine(workingDirectory, uniqueStem + ".mid");
         var genericMidi = Path.Combine(workingDirectory, "output.mid");
         outputPath ??= Path.Combine(Path.GetDirectoryName(Path.GetFullPath(audioPath))!, Path.GetFileNameWithoutExtension(audioPath) + ".mid");
+        string? generated = null;
 
         try
         {
@@ -114,12 +115,14 @@ public sealed class PianoTransAudioConverter : IAudioConverter
 
             var stdout = await stdoutTask;
             var stderr = await stderrTask;
-            var generated = File.Exists(expectedMidi) ? expectedMidi : File.Exists(genericMidi) ? genericMidi : null;
+            generated = FindGeneratedMidi(workingDirectory, uniqueStem, expectedMidi, temporaryAudio, genericMidi);
             if (generated is null)
             {
                 var detail = string.IsNullOrWhiteSpace(stderr) ? stdout : stderr;
                 return new ConversionResult(false,
-                    process.ExitCode == 0 ? "转换结束，但未找到输出 MIDI 文件" : $"转换失败（{process.ExitCode}）：{detail.Trim()}", null);
+                    process.ExitCode == 0
+                        ? $"转换结束，但未找到输出 MIDI 文件（已查找：{Path.GetFileName(expectedMidi)}、{Path.GetFileName(temporaryAudio)}.mid、output.mid）"
+                        : $"转换失败（{process.ExitCode}）：{detail.Trim()}", null);
             }
 
             Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
@@ -138,10 +141,34 @@ public sealed class PianoTransAudioConverter : IAudioConverter
         finally
         {
             TryDelete(temporaryAudio);
-            TryDelete(expectedMidi);
+            if (generated is null)
+            {
+                TryDelete(expectedMidi);
+                TryDelete(temporaryAudio + ".mid");
+            }
             stopwatch.Stop();
             _conversionGate.Release();
         }
+    }
+
+    internal static string? FindGeneratedMidi(string workingDirectory, string uniqueStem, string expectedMidi, string temporaryAudio, string genericMidi)
+    {
+        if (File.Exists(expectedMidi)) return expectedMidi;
+        if (File.Exists(temporaryAudio + ".mid")) return temporaryAudio + ".mid";
+
+        try
+        {
+            var stemMatch = Directory.EnumerateFiles(workingDirectory, $"{uniqueStem}*.mid", SearchOption.AllDirectories)
+                .OrderByDescending(File.GetLastWriteTimeUtc)
+                .FirstOrDefault();
+            if (stemMatch is not null) return stemMatch;
+        }
+        catch (Exception)
+        {
+            // Fall back to the generic output name if the directory search fails.
+        }
+
+        return File.Exists(genericMidi) ? genericMidi : null;
     }
 
     private static string? FindExecutable(IEnumerable<string> paths)

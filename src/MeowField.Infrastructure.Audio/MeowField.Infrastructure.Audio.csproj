@@ -10,4 +10,7 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="MeowField.Infrastructure.Tests" />
+  </ItemGroup>
 </Project>
