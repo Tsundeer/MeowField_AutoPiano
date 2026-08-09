@@ -120,6 +120,12 @@ public partial class ProfilesViewModel : ObservableObject
         SelectedProfile = GameProfiles.FirstOrDefault(profile => string.Equals(profile.Id, id, StringComparison.OrdinalIgnoreCase));
     }
 
+    public void ClearSelectedProfile()
+    {
+        _pendingProfileId = null;
+        SelectedProfile = null;
+    }
+
     public void RefreshKeyMappings(MappingConfig config) => PopulateKeyMappings(config);
 
     [RelayCommand]

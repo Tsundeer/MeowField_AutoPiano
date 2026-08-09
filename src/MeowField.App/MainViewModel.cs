@@ -577,19 +577,33 @@ public partial class MainViewModel : ObservableObject, IDisposable
         ScheduleSettingsSave();
     }
 
-    partial void OnSpeedChanged(double value) { ScheduleSettingsSave(); SchedulePlaybackConfigRefresh(); }
-    partial void OnTransposeChanged(int value) { ScheduleSettingsSave(); SchedulePlaybackConfigRefresh(); OnPropertyChanged(nameof(TransposeLabel)); }
-    partial void OnMaxPolyphonyChanged(int value) { ScheduleSettingsSave(); SchedulePlaybackConfigRefresh(); }
-    partial void OnLinkLatencyMsChanged(int value) { ScheduleSettingsSave(); SchedulePlaybackConfigRefresh(); }
-    partial void OnPreferNearestWhiteChanged(bool value) { ScheduleSettingsSave(); SchedulePlaybackConfigRefresh(); }
-    partial void OnAutoTransposeChanged(bool value) => ScheduleSettingsSave();
-    partial void OnInputModeChanged(InputMode value) { ScheduleSettingsSave(); SchedulePlaybackConfigRefresh(); }
-    partial void OnChordModeChanged(ChordMode value) { ScheduleSettingsSave(); SchedulePlaybackConfigRefresh(); }
+    partial void OnSpeedChanged(double value) { InvalidateProfileSelection(); ScheduleSettingsSave(); SchedulePlaybackConfigRefresh(); }
+    partial void OnTransposeChanged(int value) { InvalidateProfileSelection(); ScheduleSettingsSave(); SchedulePlaybackConfigRefresh(); OnPropertyChanged(nameof(TransposeLabel)); }
+    partial void OnMaxPolyphonyChanged(int value) { InvalidateProfileSelection(); ScheduleSettingsSave(); SchedulePlaybackConfigRefresh(); }
+    partial void OnLinkLatencyMsChanged(int value) { InvalidateProfileSelection(); ScheduleSettingsSave(); SchedulePlaybackConfigRefresh(); }
+    partial void OnPreferNearestWhiteChanged(bool value) { InvalidateProfileSelection(); ScheduleSettingsSave(); SchedulePlaybackConfigRefresh(); }
+    partial void OnAutoTransposeChanged(bool value) { InvalidateProfileSelection(); ScheduleSettingsSave(); }
+    partial void OnInputModeChanged(InputMode value) { InvalidateProfileSelection(); ScheduleSettingsSave(); SchedulePlaybackConfigRefresh(); }
+    partial void OnChordModeChanged(ChordMode value) { InvalidateProfileSelection(); ScheduleSettingsSave(); SchedulePlaybackConfigRefresh(); }
     partial void OnAutoPlayNextChanged(bool value) => ScheduleSettingsSave();
     partial void OnCustomKeyMapChanged(IReadOnlyDictionary<int, string>? value) { ScheduleSettingsSave(); SchedulePlaybackConfigRefresh(); }
     partial void OnTargetProcessNameChanged(string? value) => ScheduleSettingsSave();
-    partial void OnNoteRangeLowChanged(int value) { if (value > NoteRangeHigh) NoteRangeHigh = value; ScheduleSettingsSave(); SchedulePlaybackConfigRefresh(); }
-    partial void OnNoteRangeHighChanged(int value) { if (value < NoteRangeLow) NoteRangeLow = value; ScheduleSettingsSave(); SchedulePlaybackConfigRefresh(); }
+    partial void OnNoteRangeLowChanged(int value)
+    {
+        if (value > NoteRangeHigh) NoteRangeHigh = value;
+        InvalidateProfileSelection();
+        if (!_applyingConfig) Profiles.RefreshKeyMappings(CreateConfig());
+        ScheduleSettingsSave();
+        SchedulePlaybackConfigRefresh();
+    }
+    partial void OnNoteRangeHighChanged(int value)
+    {
+        if (value < NoteRangeLow) NoteRangeLow = value;
+        InvalidateProfileSelection();
+        if (!_applyingConfig) Profiles.RefreshKeyMappings(CreateConfig());
+        ScheduleSettingsSave();
+        SchedulePlaybackConfigRefresh();
+    }
     partial void OnWhiteKeyRatioChanged(double? value) => OnPropertyChanged(nameof(FitRatioLabel));
     partial void OnOriginalWhiteKeyRatioChanged(double? value) => OnPropertyChanged(nameof(OriginalFitRatioLabel));
 
@@ -632,8 +646,16 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 UpdateFitRatios();
             }
             RebuildKeyboardPreview(CreateConfig());
+            Profiles.ClearSelectedProfile();
+            Profiles.RefreshKeyMappings(CreateConfig());
         }
         ScheduleSettingsSave();
+    }
+
+    private void InvalidateProfileSelection()
+    {
+        if (_applyingConfig) return;
+        Profiles.ClearSelectedProfile();
     }
 
     private void SaveInstrumentRange(InstrumentKind instrumentKind, int low, int high)
