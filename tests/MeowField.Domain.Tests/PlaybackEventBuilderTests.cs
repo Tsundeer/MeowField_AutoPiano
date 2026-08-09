@@ -95,7 +95,7 @@ public sealed class PlaybackEventBuilderTests
     }
 
     [Fact]
-    public void Speed_ScalesStartAndGuaranteesPositiveDuration()
+    public void Speed_ScalesStartAndGuaranteesMinimumPhysicalHold()
     {
         MidiNote[] notes = [new(9, 10, 60, 100, 0, 0)];
         var config = new MappingConfig { Speed = 2, ChordMode = ChordMode.Off };
@@ -103,6 +103,6 @@ public sealed class PlaybackEventBuilderTests
         var events = PlaybackEventBuilder.Build(notes, config);
 
         Assert.Equal(4, events[0].TimeMs);
-        Assert.Equal(5, events[1].TimeMs);
+        Assert.Equal(49, events[1].TimeMs);
     }
 }

@@ -18,7 +18,6 @@
             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
             <StackPanel>
                 <TextBlock Style="{StaticResource HeadingText}" Text="在线曲库" />
-                <TextBlock Margin="0,5,0,0" Style="{StaticResource SecondaryText}" Text="浏览、搜索并即时加载经过完整性校验的 MIDI 文件；不保留本地副本" />
             </StackPanel>
             <Button Grid.Column="1" Style="{StaticResource PrimaryButton}" Command="{Binding RefreshCommand}">
                 <StackPanel Orientation="Horizontal"><iconPacks:PackIconLucide Kind="RefreshCw" Width="15" Height="15" /><TextBlock Margin="7,0,0,0" Text="刷新曲库" /></StackPanel>

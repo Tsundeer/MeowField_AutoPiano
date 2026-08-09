@@ -2,6 +2,8 @@ namespace MeowField.Domain;
 
 public static class PlaybackEventBuilder
 {
+    private const int MinimumKeyHoldMs = 45;
+
     public static IReadOnlyList<PlayEvent> Build(IReadOnlyList<MidiNote> notes, MappingConfig config)
     {
         config.Validate();
@@ -115,7 +117,7 @@ public static class PlaybackEventBuilder
     {
         var start = (int)(note.StartMs / speed);
         var end = (int)(note.EndMs / speed);
-        return note with { StartMs = start, EndMs = Math.Max(start + 1, end) };
+        return note with { StartMs = start, EndMs = Math.Max(start + MinimumKeyHoldMs, end) };
     };
 
     private static int Normalize(int note, MappingConfig config)

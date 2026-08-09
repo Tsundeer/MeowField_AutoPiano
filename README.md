@@ -4,7 +4,7 @@
 
 MeowField_AutoPiano 是一款 Windows 自动弹琴软件：加载 MIDI 即可自动向目标窗口演奏，也能把普通音频文件自动转换为 MIDI 谱。软件专为《开放空间》PC 端乐器玩法适配，同时内置《异环》《第五人格》等游戏的乐器键位档案，开箱即用。
 
-当前版本：**2.2.10**（2.0 为正式版基线）  
+当前版本：**2.2.11**（2.0 为正式版基线）  
 作者 / 软件署名：**薮猫**  
 项目主页：<https://github.com/Tsundeer/MeowField_AutoPiano>  
 下载地址：GitHub [Releases](https://github.com/Tsundeer/MeowField_AutoPiano/releases)

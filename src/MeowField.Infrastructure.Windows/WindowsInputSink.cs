@@ -16,6 +16,7 @@ public sealed class WindowsInputSink(ILogger<WindowsInputSink>? logger = null) :
     private const uint WmActivate = 0x0006;
     private const uint WmSetFocus = 0x0007;
     private const nuint WaActive = 1;
+    private const int InterEventDelayMs = 1;
 
     public void SendBatch(IReadOnlyList<PlayEvent> events, InputMode mode, nint targetWindow, int latencyMs)
     {
@@ -32,6 +33,10 @@ public sealed class WindowsInputSink(ILogger<WindowsInputSink>? logger = null) :
             foreach (var item in events)
             {
                 PostKey(messageTarget, item.Key, item.Type == PlayEventType.Down);
+                if (events.Count > 1)
+                {
+                    Thread.Sleep(InterEventDelayMs);
+                }
             }
         }
         else
@@ -51,7 +56,7 @@ public sealed class WindowsInputSink(ILogger<WindowsInputSink>? logger = null) :
 
     private void SendInputBatch(IReadOnlyList<PlayEvent> events)
     {
-        var inputs = new List<NativeInput>();
+        var groups = new List<NativeInput[]>();
         foreach (var item in events)
         {
             var parsed = KeyboardMap.Parse(item.Key);
@@ -61,6 +66,7 @@ public sealed class WindowsInputSink(ILogger<WindowsInputSink>? logger = null) :
                 continue;
             }
 
+            var inputs = new List<NativeInput>();
             var isDown = item.Type == PlayEventType.Down;
             if (isDown)
             {
@@ -72,19 +78,31 @@ public sealed class WindowsInputSink(ILogger<WindowsInputSink>? logger = null) :
                 inputs.Add(CreateScanInput(KeyboardMap.ScanCodes[parsed.Primary], false));
                 inputs.AddRange(parsed.Modifiers.Reverse().Select(modifier => CreateScanInput(KeyboardMap.ModifierScans[modifier], false)));
             }
+
+            if (inputs.Count > 0)
+            {
+                groups.Add(inputs.ToArray());
+            }
         }
 
-        if (inputs.Count == 0)
+        for (var index = 0; index < groups.Count; index++)
         {
-            return;
+            SendInputBatchCore(groups[index]);
+            if (index < groups.Count - 1)
+            {
+                // 并发按键逐键发送并留出微小间隔，避免游戏在同一个输入帧内丢弃部分按键。
+                Thread.Sleep(InterEventDelayMs);
+            }
         }
+    }
 
-        var array = inputs.ToArray();
-        var sent = SendInput((uint)array.Length, array, Marshal.SizeOf<NativeInput>());
-        if (sent != array.Length)
+    private void SendInputBatchCore(NativeInput[] inputs)
+    {
+        var sent = SendInput((uint)inputs.Length, inputs, Marshal.SizeOf<NativeInput>());
+        if (sent != inputs.Length)
         {
             var exception = new Win32Exception(Marshal.GetLastWin32Error());
-            logger?.LogError(exception, "SendInput sent {SentCount} of {ExpectedCount} events", sent, array.Length);
+            logger?.LogError(exception, "SendInput sent {SentCount} of {ExpectedCount} events", sent, inputs.Length);
             throw exception;
         }
     }
