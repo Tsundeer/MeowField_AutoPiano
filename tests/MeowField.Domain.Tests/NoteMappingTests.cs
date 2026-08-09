@@ -32,6 +32,42 @@ public sealed class NoteMappingTests
         Assert.Equal(1, NoteMapping.CalculateWhiteKeyRatio(notes, result));
     }
 
+    [Fact]
+    public void BuildOctaveOffsets_MovesOutOfRangeNoteToAvoidSameKeyCollision()
+    {
+        MidiNote[] notes =
+        [
+            new(0, 500, 43, 100, 0, 0),
+            new(0, 500, 55, 100, 0, 0),
+        ];
+
+        var offsets = NoteMapping.BuildOctaveOffsets(notes, new MappingConfig { ChordMode = ChordMode.Off });
+
+        // G2 and G3 would both fold to key G; the smart fold moves G2 up another octave instead.
+        Assert.Equal(2, offsets.GetValueOrDefault(43));
+        Assert.False(offsets.ContainsKey(55));
+    }
+
+    [Fact]
+    public void FindOptimalTranspose_WithMidiNotes_AchievesMinimumLostNotes()
+    {
+        MidiNote[] notes =
+        [
+            new(0, 100, 43, 90, 0, 0),
+            new(0, 100, 55, 80, 0, 0),
+            new(0, 100, 61, 70, 0, 0),
+            new(0, 100, 63, 60, 0, 0),
+        ];
+        var config = new MappingConfig { ChordMode = ChordMode.Off };
+
+        var result = NoteMapping.FindOptimalTranspose(notes, config);
+        var minimumLost = Enumerable.Range(-12, 25)
+            .Min(transpose => notes.Length - PlaybackEventBuilder.Build(notes, config with { TransposeSemitones = transpose }).Count(item => item.Type == PlayEventType.Down));
+        var actualLost = notes.Length - PlaybackEventBuilder.Build(notes, config with { TransposeSemitones = result }).Count(item => item.Type == PlayEventType.Down);
+
+        Assert.Equal(minimumLost, actualLost);
+    }
+
     [Theory]
     [InlineData(60, "A")]
     [InlineData(74, "5")]

@@ -139,4 +139,337 @@ public static class NoteMapping
     }
 
     private static int Mod12(int value) => ((value % 12) + 12) % 12;
+
+    public static IReadOnlyDictionary<int, int> BuildOctaveOffsets(
+        IEnumerable<MidiNote> notes,
+        MappingConfig config,
+        int maxOctaveJump = 2)
+    {
+        var values = notes as IReadOnlyList<MidiNote> ?? notes.ToArray();
+        if (values.Count == 0 || config.Instrument == InstrumentKind.Drums)
+        {
+            return new Dictionary<int, int>();
+        }
+
+        var low = config.NoteRangeLow;
+        var high = config.NoteRangeHigh;
+        var transpose = config.TransposeSemitones;
+        var distinct = values.Select(note => note.Note).Distinct().ToArray();
+        var natural = distinct.ToDictionary(note => note, note => NaturalOctaveOffset(note, transpose, low, high));
+        var offsets = new Dictionary<int, int>(natural);
+        var bestScore = ScoreOctaveOffsets(values, config, offsets);
+        var outOfRange = distinct
+            .Where(note => note + transpose < low || note + transpose > high)
+            .ToArray();
+        RunOctaveSearch(values, config, offsets, ref bestScore, natural, outOfRange, low, high, maxOctaveJump);
+
+        var stillColliding = FindCollidingPitches(values, config, offsets);
+        var inRangeColliding = distinct
+            .Where(note => natural[note] == 0 && offsets[note] == 0 && stillColliding.Contains(note))
+            .ToArray();
+        RunOctaveSearch(values, config, offsets, ref bestScore, natural, inRangeColliding, low, high, maxOctaveJump);
+
+        return offsets
+            .Where(pair => pair.Value != natural[pair.Key])
+            .ToDictionary(pair => pair.Key, pair => pair.Value);
+    }
+
+    private static void RunOctaveSearch(
+        IReadOnlyList<MidiNote> values,
+        MappingConfig config,
+        Dictionary<int, int> offsets,
+        ref int bestScore,
+        IReadOnlyDictionary<int, int> natural,
+        IReadOnlyList<int> movable,
+        int low,
+        int high,
+        int maxOctaveJump)
+    {
+        if (movable.Count == 0)
+        {
+            return;
+        }
+
+        var choices = new Dictionary<int, int[]>(movable.Count);
+        foreach (var note in movable)
+        {
+            var options = new List<int>();
+            for (var k = -4; k <= 4; k++)
+            {
+                var shifted = note + config.TransposeSemitones + 12 * k;
+                if (shifted >= low && shifted <= high && Math.Abs(k - natural[note]) <= maxOctaveJump)
+                {
+                    options.Add(k);
+                }
+            }
+
+            choices[note] = options.Distinct().ToArray();
+        }
+
+        for (var round = 0; round < 6; round++)
+        {
+            var improved = false;
+            foreach (var note in movable)
+            {
+                foreach (var candidate in choices[note])
+                {
+                    if (candidate == offsets[note])
+                    {
+                        continue;
+                    }
+
+                    var previous = offsets[note];
+                    offsets[note] = candidate;
+                    var score = ScoreOctaveOffsets(values, config, offsets);
+                    if (score < bestScore)
+                    {
+                        bestScore = score;
+                        improved = true;
+                    }
+                    else
+                    {
+                        offsets[note] = previous;
+                    }
+                }
+            }
+
+            if (!improved)
+            {
+                break;
+            }
+        }
+    }
+
+    public static int FindOptimalTranspose(IEnumerable<MidiNote> notes, MappingConfig config, int rangeLimit = 12)
+    {
+        var values = notes as IReadOnlyList<MidiNote> ?? notes.ToArray();
+        if (values.Count == 0 || config.Instrument == InstrumentKind.Drums)
+        {
+            return 0;
+        }
+
+        var bestTranspose = 0;
+        var bestLost = int.MaxValue;
+        var bestRatio = double.MinValue;
+        for (var transpose = -rangeLimit; transpose <= rangeLimit; transpose++)
+        {
+            var candidateConfig = config with { TransposeSemitones = transpose };
+            var offsets = BuildOctaveOffsets(values, candidateConfig);
+            var lost = ScoreOctaveOffsets(values, candidateConfig, offsets);
+            var ratio = config.PreferNearestWhite
+                ? CalculateWhiteKeyRatio(values.Select(note => note.Note), transpose)
+                : CalculateRangeFitRatio(values.Select(note => note.Note), config.NoteRangeLow, config.NoteRangeHigh, transpose);
+            var ratioTie = Math.Abs(ratio - bestRatio) < 1e-9;
+            if (lost < bestLost ||
+                (lost == bestLost && ratio > bestRatio + 1e-9) ||
+                (lost == bestLost && ratioTie && Math.Abs(transpose) < Math.Abs(bestTranspose)))
+            {
+                bestLost = lost;
+                bestRatio = ratio;
+                bestTranspose = transpose;
+            }
+        }
+
+        return bestTranspose;
+    }
+
+    private static int NaturalOctaveOffset(int note, int transpose, int low, int high)
+    {
+        var shifted = note + transpose;
+        var offset = 0;
+        while (shifted + 12 * offset < low)
+        {
+            offset++;
+        }
+
+        while (shifted + 12 * offset > high)
+        {
+            offset--;
+        }
+
+        return offset;
+    }
+
+    private static HashSet<int> FindCollidingPitches(
+        IReadOnlyList<MidiNote> notes,
+        MappingConfig config,
+        IReadOnlyDictionary<int, int> octaveOffsets)
+    {
+        var colliding = new HashSet<int>();
+        var windowMs = Math.Max(0, config.ChordClusterWindowMs);
+        var scaled = notes
+            .Select(note => ScaleForScoring(note, config.Speed))
+            .OrderBy(note => note.StartMs)
+            .ThenBy(note => note.EndMs)
+            .ThenByDescending(note => note.Note)
+            .ToArray();
+
+        var cluster = new List<MidiNote>();
+        var clusterStart = 0;
+        foreach (var note in scaled)
+        {
+            if (cluster.Count == 0)
+            {
+                cluster.Add(note);
+                clusterStart = note.StartMs;
+            }
+            else if (note.StartMs - clusterStart <= windowMs)
+            {
+                cluster.Add(note);
+            }
+            else
+            {
+                CollectCollidingPitches(cluster, config, octaveOffsets, colliding);
+                cluster = [note];
+                clusterStart = note.StartMs;
+            }
+        }
+
+        if (cluster.Count > 0)
+        {
+            CollectCollidingPitches(cluster, config, octaveOffsets, colliding);
+        }
+
+        return colliding;
+    }
+
+    private static void CollectCollidingPitches(
+        IReadOnlyList<MidiNote> cluster,
+        MappingConfig config,
+        IReadOnlyDictionary<int, int> octaveOffsets,
+        HashSet<int> colliding)
+    {
+        var byKey = new Dictionary<string, List<MidiNote>>(StringComparer.Ordinal);
+        foreach (var note in cluster)
+        {
+            var key = MappedKeyForScoring(note, config, octaveOffsets);
+            if (key is null)
+            {
+                continue;
+            }
+
+            if (!byKey.TryGetValue(key, out var list))
+            {
+                byKey[key] = list = [];
+            }
+
+            list.Add(note);
+        }
+
+        foreach (var group in byKey.Values.Where(list => list.Count > 1))
+        {
+            foreach (var note in group)
+            {
+                colliding.Add(note.Note);
+            }
+        }
+    }
+
+    private static int ScoreOctaveOffsets(
+        IReadOnlyList<MidiNote> notes,
+        MappingConfig config,
+        IReadOnlyDictionary<int, int> octaveOffsets)
+    {
+        var windowMs = Math.Max(0, config.ChordClusterWindowMs);
+        var scaled = notes
+            .Select(note => ScaleForScoring(note, config.Speed))
+            .OrderBy(note => note.StartMs)
+            .ThenBy(note => note.EndMs)
+            .ThenByDescending(note => note.Note)
+            .ToArray();
+
+        var lost = 0;
+        var cluster = new List<MidiNote>();
+        var clusterStart = 0;
+        foreach (var note in scaled)
+        {
+            if (cluster.Count == 0)
+            {
+                cluster.Add(note);
+                clusterStart = note.StartMs;
+            }
+            else if (note.StartMs - clusterStart <= windowMs)
+            {
+                cluster.Add(note);
+            }
+            else
+            {
+                lost += CountSwallowedNotes(cluster, config, octaveOffsets);
+                cluster = [note];
+                clusterStart = note.StartMs;
+            }
+        }
+
+        if (cluster.Count > 0)
+        {
+            lost += CountSwallowedNotes(cluster, config, octaveOffsets);
+        }
+
+        return lost;
+    }
+
+    private static MidiNote ScaleForScoring(MidiNote note, double speed)
+    {
+        if (speed <= 0 || double.IsNaN(speed) || double.IsInfinity(speed))
+        {
+            return note;
+        }
+
+        var start = (int)(note.StartMs / speed);
+        var end = Math.Max(start + PlaybackEventBuilder.MinimumKeyHoldMs, (int)(note.EndMs / speed));
+        return note with { StartMs = start, EndMs = end };
+    }
+
+    private static string? MappedKeyForScoring(
+        MidiNote note,
+        MappingConfig config,
+        IReadOnlyDictionary<int, int> octaveOffsets)
+    {
+        var shifted = note.Note + config.TransposeSemitones + octaveOffsets.GetValueOrDefault(note.Note) * 12;
+        if (config.Instrument == InstrumentKind.Microphone)
+        {
+            return MapMicrophoneKey(shifted, 0, config.CustomKeyMap, config.NoteRangeLow, config.NoteRangeHigh);
+        }
+
+        var folded = FoldToRange(shifted, config.NoteRangeLow, config.NoteRangeHigh);
+        if (config.PreferNearestWhite)
+        {
+            folded = NearestWhite(folded, config.NoteRangeLow, config.NoteRangeHigh);
+        }
+
+        return MapPianoKey(folded, config.CustomKeyMap);
+    }
+
+    private static int CountSwallowedNotes(
+        IReadOnlyList<MidiNote> cluster,
+        MappingConfig config,
+        IReadOnlyDictionary<int, int> octaveOffsets)
+    {
+        var entries = new List<(MidiNote Note, string? Key)>();
+        foreach (var note in cluster)
+        {
+            entries.Add((note, MappedKeyForScoring(note, config, octaveOffsets)));
+        }
+
+        var lost = 0;
+        foreach (var group in entries.Where(entry => entry.Key is not null).GroupBy(entry => entry.Key!))
+        {
+            var ordered = group.OrderBy(entry => entry.Note.StartMs).ThenBy(entry => entry.Note.EndMs).ToArray();
+            var pressEnd = ordered[0].Note.EndMs;
+            for (var i = 1; i < ordered.Length; i++)
+            {
+                if (ordered[i].Note.StartMs <= pressEnd)
+                {
+                    lost++;
+                }
+                else
+                {
+                    pressEnd = ordered[i].Note.EndMs;
+                }
+            }
+        }
+
+        return lost;
+    }
+
 }

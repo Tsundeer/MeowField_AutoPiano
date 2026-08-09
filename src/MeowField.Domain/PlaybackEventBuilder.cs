@@ -2,7 +2,7 @@ namespace MeowField.Domain;
 
 public static class PlaybackEventBuilder
 {
-    private const int MinimumKeyHoldMs = 45;
+    internal const int MinimumKeyHoldMs = 45;
 
     public static IReadOnlyList<PlayEvent> Build(IReadOnlyList<MidiNote> notes, MappingConfig config)
     {
@@ -12,11 +12,15 @@ public static class PlaybackEventBuilder
             return [];
         }
 
+        var octaveOffsets = config.Instrument == InstrumentKind.Drums
+            ? null
+            : NoteMapping.BuildOctaveOffsets(notes, config);
+
         return config.Instrument switch
         {
             InstrumentKind.Drums => BuildDrumEvents(notes, config),
-            InstrumentKind.Microphone => BuildClusteredEvents(notes, config, microphone: true),
-            _ => BuildClusteredEvents(notes, config, microphone: false),
+            InstrumentKind.Microphone => BuildClusteredEvents(notes, config, microphone: true, octaveOffsets),
+            _ => BuildClusteredEvents(notes, config, microphone: false, octaveOffsets),
         };
     }
 
@@ -43,7 +47,8 @@ public static class PlaybackEventBuilder
     private static IReadOnlyList<PlayEvent> BuildClusteredEvents(
         IReadOnlyList<MidiNote> notes,
         MappingConfig config,
-        bool microphone)
+        bool microphone,
+        IReadOnlyDictionary<int, int>? octaveOffsets)
     {
         var scaled = notes.Select(Scale(config.Speed))
             .OrderBy(note => note.StartMs)
@@ -61,7 +66,7 @@ public static class PlaybackEventBuilder
 
             if (!microphone && config.ChordPrefer)
             {
-                var normalized = ordered.Select(note => Normalize(note.Note, config)).ToArray();
+                var normalized = ordered.Select(note => Normalize(note.Note, config, octaveOffsets)).ToArray();
                 var chordKey = ChordDetector.Detect(normalized);
                 if (chordKey is not null)
                 {
@@ -71,7 +76,7 @@ public static class PlaybackEventBuilder
                     if (config.KeepMelodyTopNote)
                     {
                         var melody = ordered[0];
-                        var normalizedMelody = Normalize(melody.Note, config);
+                        var normalizedMelody = Normalize(melody.Note, config, octaveOffsets);
                         var melodyKey = NoteMapping.MapPianoKey(normalizedMelody, config.CustomKeyMap);
                         if (melodyKey is not null)
                         {
@@ -86,8 +91,8 @@ public static class PlaybackEventBuilder
 
             var mapped = ordered
                 .Select(note => (Note: note, Key: microphone
-                    ? NoteMapping.MapMicrophoneKey(note.Note, config.TransposeSemitones, config.CustomKeyMap, config.NoteRangeLow, config.NoteRangeHigh)
-                    : NoteMapping.MapPianoKey(Normalize(note.Note, config), config.CustomKeyMap)))
+                    ? NoteMapping.MapMicrophoneKey(note.Note + (octaveOffsets?.GetValueOrDefault(note.Note) ?? 0) * 12, config.TransposeSemitones, config.CustomKeyMap, config.NoteRangeLow, config.NoteRangeHigh)
+                    : NoteMapping.MapPianoKey(Normalize(note.Note, config, octaveOffsets), config.CustomKeyMap)))
                 .Where(entry => entry.Key is not null)
                 .GroupBy(entry => entry.Key!, StringComparer.Ordinal)
                 .Select(entry => new
@@ -120,9 +125,10 @@ public static class PlaybackEventBuilder
         return note with { StartMs = start, EndMs = Math.Max(start + MinimumKeyHoldMs, end) };
     };
 
-    private static int Normalize(int note, MappingConfig config)
+    private static int Normalize(int note, MappingConfig config, IReadOnlyDictionary<int, int>? octaveOffsets)
     {
-        var normalized = NoteMapping.FoldToRange(note + config.TransposeSemitones, config.NoteRangeLow, config.NoteRangeHigh);
+        var shifted = note + config.TransposeSemitones + (octaveOffsets?.GetValueOrDefault(note) ?? 0) * 12;
+        var normalized = NoteMapping.FoldToRange(shifted, config.NoteRangeLow, config.NoteRangeHigh);
         return config.PreferNearestWhite
             ? NoteMapping.NearestWhite(normalized, config.NoteRangeLow, config.NoteRangeHigh)
             : normalized;

@@ -220,7 +220,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
             var config = CreateConfig();
             if (AutoTranspose && midi.Notes.Count > 0)
             {
-                Transpose = NoteMapping.FindOptimalTranspose(midi.Notes.Select(note => note.Note), config);
+                Transpose = NoteMapping.FindOptimalTranspose(midi.Notes, config);
                 config = CreateConfig();
             }
 

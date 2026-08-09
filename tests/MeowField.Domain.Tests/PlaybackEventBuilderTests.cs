@@ -47,6 +47,22 @@ public sealed class PlaybackEventBuilderTests
     }
 
     [Fact]
+    public void SmartOctaveFold_KeepsOctaveDoubledNotesDistinct()
+    {
+        MidiNote[] notes =
+        [
+            new(0, 500, 43, 100, 0, 0),
+            new(0, 500, 55, 100, 0, 0),
+        ];
+
+        var events = PlaybackEventBuilder.Build(notes, new MappingConfig { ChordMode = ChordMode.Off });
+
+        // G2 is folded to G4 instead of colliding with G3, so both notes keep their own press.
+        Assert.Equal(["G", "T"], events.Where(item => item.Type == PlayEventType.Down).Select(item => item.Key).Order().ToArray());
+        Assert.Equal(4, events.Count);
+    }
+
+    [Fact]
     public void Drums_FilterChannelAndKeepRawNoteMapping()
     {
         MidiNote[] notes =
