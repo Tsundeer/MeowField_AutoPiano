@@ -242,6 +242,21 @@
                                 </DataTemplate>
                             </ComboBox.ItemTemplate>
                         </ComboBox>
+                        <TextBlock Margin="0,14,0,6" Style="{StaticResource SecondaryText}" Text="冲突处理" />
+                        <ComboBox ItemsSource="{Binding CollisionStrategies}" SelectedItem="{Binding CollisionStrategy}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock>
+                                        <TextBlock.Text>
+                                            <MultiBinding Converter="{StaticResource UiTextConverter}">
+                                                <Binding />
+                                                <Binding Path="DataContext.IsEnglish" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                            </MultiBinding>
+                                        </TextBlock.Text>
+                                    </TextBlock>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
 
                         <Grid Margin="0,18,0,5"><TextBlock Style="{StaticResource SecondaryText}" Text="速度" /><TextBlock HorizontalAlignment="Right" Text="{Binding Speed, StringFormat={}{0:0.00}x}" /></Grid>
                         <Slider Minimum="0.25" Maximum="3" TickFrequency="0.05" Value="{Binding Speed}" />

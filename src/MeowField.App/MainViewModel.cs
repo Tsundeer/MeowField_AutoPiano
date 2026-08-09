@@ -116,6 +116,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     public ObservableCollection<InstrumentChoice> InstrumentChoices { get; } = [];
     [ObservableProperty] private InstrumentChoice? selectedInstrumentChoice;
     public IReadOnlyList<ChordMode> ChordModes { get; } = Enum.GetValues<ChordMode>();
+    public IReadOnlyList<CollisionStrategy> CollisionStrategies { get; } = Enum.GetValues<CollisionStrategy>();
     public ObservableCollection<KeyboardKeyState> KeyboardKeys { get; } = [];
     [ObservableProperty] private string keyboardCountText = "21 键";
     [ObservableProperty] private int keyboardColumns = 7;
@@ -144,6 +145,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     [ObservableProperty] private InputMode inputMode = InputMode.SendInput;
     [ObservableProperty] private InstrumentKind instrument = InstrumentKind.Piano;
     [ObservableProperty] private ChordMode chordMode = ChordMode.Prefer;
+    [ObservableProperty] private CollisionStrategy collisionStrategy = CollisionStrategy.PerNoteMinimal;
     [ObservableProperty] private PlaybackState playbackState = PlaybackState.Idle;
     [ObservableProperty] private bool isBusy;
     [ObservableProperty] private int noteCount;
@@ -520,6 +522,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         Speed = Speed,
         MaxPolyphony = MaxPolyphony,
         ChordMode = ChordMode,
+        CollisionStrategy = CollisionStrategy,
         AutoTranspose = AutoTranspose,
         LinkLatencyMs = LinkLatencyMs,
         CustomKeyMap = CustomKeyMap,
@@ -548,6 +551,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
             Speed = config.Speed;
             MaxPolyphony = config.MaxPolyphony;
             ChordMode = config.ChordMode;
+            CollisionStrategy = config.CollisionStrategy;
             PreferNearestWhite = config.PreferNearestWhite;
             AutoTranspose = config.AutoTranspose;
             LinkLatencyMs = config.LinkLatencyMs;
@@ -650,6 +654,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     partial void OnAutoTransposeChanged(bool value) { InvalidateProfileSelection(); ScheduleSettingsSave(); }
     partial void OnInputModeChanged(InputMode value) { InvalidateProfileSelection(); ScheduleSettingsSave(); SchedulePlaybackConfigRefresh(); }
     partial void OnChordModeChanged(ChordMode value) { InvalidateProfileSelection(); ScheduleSettingsSave(); SchedulePlaybackConfigRefresh(); }
+    partial void OnCollisionStrategyChanged(CollisionStrategy value) { InvalidateProfileSelection(); ScheduleSettingsSave(); SchedulePlaybackConfigRefresh(); }
     partial void OnAutoPlayNextChanged(bool value) => ScheduleSettingsSave();
     partial void OnCustomKeyMapChanged(IReadOnlyDictionary<int, string>? value) { ScheduleSettingsSave(); SchedulePlaybackConfigRefresh(); }
     partial void OnTargetProcessNameChanged(string? value) => ScheduleSettingsSave();

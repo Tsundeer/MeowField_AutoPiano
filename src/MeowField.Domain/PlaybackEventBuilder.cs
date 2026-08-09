@@ -12,9 +12,9 @@ public static class PlaybackEventBuilder
             return [];
         }
 
-        var octaveOffsets = config.Instrument == InstrumentKind.Drums
-            ? null
-            : NoteMapping.BuildOctaveOffsets(notes, config);
+        var octaveOffsets = config.Instrument != InstrumentKind.Drums && config.CollisionStrategy == CollisionStrategy.SmartOctaveFold
+            ? NoteMapping.BuildOctaveOffsets(notes, config)
+            : null;
 
         return config.Instrument switch
         {
@@ -89,10 +89,13 @@ public static class PlaybackEventBuilder
                 }
             }
 
+            var perNoteOffsets = config.CollisionStrategy == CollisionStrategy.PerNoteMinimal
+                ? NoteMapping.ResolveClusterOctaves(ordered, config)
+                : ordered.Select(note => octaveOffsets?.GetValueOrDefault(note.Note) ?? 0).ToArray();
             var mapped = ordered
-                .Select(note => (Note: note, Key: microphone
-                    ? NoteMapping.MapMicrophoneKey(note.Note + (octaveOffsets?.GetValueOrDefault(note.Note) ?? 0) * 12, config.TransposeSemitones, config.CustomKeyMap, config.NoteRangeLow, config.NoteRangeHigh)
-                    : NoteMapping.MapPianoKey(Normalize(note.Note, config, octaveOffsets), config.CustomKeyMap)))
+                .Select((note, index) => (Note: note, Key: microphone
+                    ? NoteMapping.MapMicrophoneKey(note.Note + perNoteOffsets[index] * 12, config.TransposeSemitones, config.CustomKeyMap, config.NoteRangeLow, config.NoteRangeHigh)
+                    : NoteMapping.MapPianoKey(Normalize(note.Note, config, perNoteOffsets[index]), config.CustomKeyMap)))
                 .Where(entry => entry.Key is not null)
                 .GroupBy(entry => entry.Key!, StringComparer.Ordinal)
                 .Select(entry => new
@@ -125,9 +128,18 @@ public static class PlaybackEventBuilder
         return note with { StartMs = start, EndMs = Math.Max(start + MinimumKeyHoldMs, end) };
     };
 
-    private static int Normalize(int note, MappingConfig config, IReadOnlyDictionary<int, int>? octaveOffsets)
+    private static int Normalize(int note, MappingConfig config, IReadOnlyDictionary<int, int>? octaveOffsets = null)
     {
         var shifted = note + config.TransposeSemitones + (octaveOffsets?.GetValueOrDefault(note) ?? 0) * 12;
+        var normalized = NoteMapping.FoldToRange(shifted, config.NoteRangeLow, config.NoteRangeHigh);
+        return config.PreferNearestWhite
+            ? NoteMapping.NearestWhite(normalized, config.NoteRangeLow, config.NoteRangeHigh)
+            : normalized;
+    }
+
+    private static int Normalize(int note, MappingConfig config, int octaveOffset)
+    {
+        var shifted = note + config.TransposeSemitones + octaveOffset * 12;
         var normalized = NoteMapping.FoldToRange(shifted, config.NoteRangeLow, config.NoteRangeHigh);
         return config.PreferNearestWhite
             ? NoteMapping.NearestWhite(normalized, config.NoteRangeLow, config.NoteRangeHigh)

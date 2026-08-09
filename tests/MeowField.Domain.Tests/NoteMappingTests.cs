@@ -33,6 +33,13 @@ public sealed class NoteMappingTests
     }
 
     [Fact]
+    public void CollisionStrategy_DefaultsToPerNoteMinimal()
+    {
+        var config = new MappingConfig();
+        Assert.Equal(CollisionStrategy.PerNoteMinimal, config.CollisionStrategy);
+    }
+
+    [Fact]
     public void BuildOctaveOffsets_MovesOutOfRangeNoteToAvoidSameKeyCollision()
     {
         MidiNote[] notes =
@@ -49,6 +56,53 @@ public sealed class NoteMappingTests
     }
 
     [Fact]
+    public void FindOptimalTranspose_OriginalFold_UsesLegacyRatioHeuristic()
+    {
+        MidiNote[] notes =
+        [
+            new(0, 100, 61, 100, 0, 0),
+            new(0, 100, 63, 100, 0, 0),
+            new(0, 100, 66, 100, 0, 0),
+        ];
+
+        var result = NoteMapping.FindOptimalTranspose(notes, new MappingConfig
+        {
+            CollisionStrategy = CollisionStrategy.OriginalFold,
+        });
+
+        Assert.Equal(-11, result);
+        Assert.Equal(1, NoteMapping.CalculateWhiteKeyRatio(notes.Select(note => note.Note), result));
+    }
+
+    [Fact]
+    public void ResolveClusterOctaves_MovesCollidingNoteToNearestFreeOctave()
+    {
+        MidiNote[] cluster =
+        [
+            new(0, 500, 55, 100, 0, 0),
+            new(0, 500, 43, 100, 0, 0),
+        ];
+
+        var offsets = NoteMapping.ResolveClusterOctaves(cluster, new MappingConfig { ChordMode = ChordMode.Off });
+
+        // G3 keeps its natural key; G2 is moved one octave up (G4) to avoid the same-key collision.
+        Assert.Equal([0, 2], offsets);
+    }
+
+    [Fact]
+    public void ResolveClusterOctaves_KeepsNonCollidingNotesAtNaturalOctave()
+    {
+        MidiNote[] cluster =
+        [
+            new(0, 500, 43, 100, 0, 0),
+        ];
+
+        var offsets = NoteMapping.ResolveClusterOctaves(cluster, new MappingConfig { ChordMode = ChordMode.Off });
+
+        Assert.Equal([0], offsets);
+    }
+
+    [Fact]
     public void FindOptimalTranspose_WithMidiNotes_AchievesMinimumLostNotes()
     {
         MidiNote[] notes =
@@ -58,7 +112,7 @@ public sealed class NoteMappingTests
             new(0, 100, 61, 70, 0, 0),
             new(0, 100, 63, 60, 0, 0),
         ];
-        var config = new MappingConfig { ChordMode = ChordMode.Off };
+        var config = new MappingConfig { ChordMode = ChordMode.Off, CollisionStrategy = CollisionStrategy.PerNoteMinimal };
 
         var result = NoteMapping.FindOptimalTranspose(notes, config);
         var minimumLost = Enumerable.Range(-12, 25)

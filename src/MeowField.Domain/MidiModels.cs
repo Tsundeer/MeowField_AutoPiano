@@ -47,6 +47,13 @@ public enum ChordMode
     Smart,
 }
 
+public enum CollisionStrategy
+{
+    OriginalFold,
+    SmartOctaveFold,
+    PerNoteMinimal,
+}
+
 public sealed record HotkeyConfig(
     string PlayPause = "ctrl+shift+c",
     string Stop = "f9");
@@ -63,6 +70,7 @@ public sealed record MappingConfig
     public double Speed { get; init; } = 1.0;
     public int MaxPolyphony { get; init; } = 10;
     public ChordMode ChordMode { get; init; } = ChordMode.Prefer;
+    public CollisionStrategy CollisionStrategy { get; init; } = CollisionStrategy.PerNoteMinimal;
     public bool KeepMelodyTopNote { get; init; } = true;
     public int ChordClusterWindowMs { get; init; } = 40;
     public bool AutoTranspose { get; init; }

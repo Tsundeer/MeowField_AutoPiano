@@ -139,6 +139,45 @@ public static class NoteMapping
     }
 
     private static int Mod12(int value) => ((value % 12) + 12) % 12;
+    public static int FindOptimalTranspose(IEnumerable<MidiNote> notes, MappingConfig config, int rangeLimit = 12)
+    {
+        var values = notes as IReadOnlyList<MidiNote> ?? notes.ToArray();
+        if (values.Count == 0 || config.Instrument == InstrumentKind.Drums)
+        {
+            return 0;
+        }
+
+        if (config.CollisionStrategy == CollisionStrategy.OriginalFold)
+        {
+            return FindOptimalTranspose(values.Select(note => note.Note), config, rangeLimit);
+        }
+
+        var bestTranspose = 0;
+        var bestLost = int.MaxValue;
+        var bestRatio = double.MinValue;
+        for (var transpose = -rangeLimit; transpose <= rangeLimit; transpose++)
+        {
+            var candidateConfig = config with { TransposeSemitones = transpose };
+            var lost = config.CollisionStrategy == CollisionStrategy.SmartOctaveFold
+                ? ScoreOctaveOffsets(values, candidateConfig, BuildOctaveOffsets(values, candidateConfig))
+                : ScoreClusteredLoss(values, candidateConfig);
+            var ratio = config.PreferNearestWhite
+                ? CalculateWhiteKeyRatio(values.Select(note => note.Note), transpose)
+                : CalculateRangeFitRatio(values.Select(note => note.Note), config.NoteRangeLow, config.NoteRangeHigh, transpose);
+            var ratioTie = Math.Abs(ratio - bestRatio) < 1e-9;
+            if (lost < bestLost ||
+                (lost == bestLost && ratio > bestRatio + 1e-9) ||
+                (lost == bestLost && ratioTie && Math.Abs(transpose) < Math.Abs(bestTranspose)))
+            {
+                bestLost = lost;
+                bestRatio = ratio;
+                bestTranspose = transpose;
+            }
+        }
+
+        return bestTranspose;
+    }
+
 
     public static IReadOnlyDictionary<int, int> BuildOctaveOffsets(
         IEnumerable<MidiNote> notes,
@@ -238,56 +277,6 @@ public static class NoteMapping
                 break;
             }
         }
-    }
-
-    public static int FindOptimalTranspose(IEnumerable<MidiNote> notes, MappingConfig config, int rangeLimit = 12)
-    {
-        var values = notes as IReadOnlyList<MidiNote> ?? notes.ToArray();
-        if (values.Count == 0 || config.Instrument == InstrumentKind.Drums)
-        {
-            return 0;
-        }
-
-        var bestTranspose = 0;
-        var bestLost = int.MaxValue;
-        var bestRatio = double.MinValue;
-        for (var transpose = -rangeLimit; transpose <= rangeLimit; transpose++)
-        {
-            var candidateConfig = config with { TransposeSemitones = transpose };
-            var offsets = BuildOctaveOffsets(values, candidateConfig);
-            var lost = ScoreOctaveOffsets(values, candidateConfig, offsets);
-            var ratio = config.PreferNearestWhite
-                ? CalculateWhiteKeyRatio(values.Select(note => note.Note), transpose)
-                : CalculateRangeFitRatio(values.Select(note => note.Note), config.NoteRangeLow, config.NoteRangeHigh, transpose);
-            var ratioTie = Math.Abs(ratio - bestRatio) < 1e-9;
-            if (lost < bestLost ||
-                (lost == bestLost && ratio > bestRatio + 1e-9) ||
-                (lost == bestLost && ratioTie && Math.Abs(transpose) < Math.Abs(bestTranspose)))
-            {
-                bestLost = lost;
-                bestRatio = ratio;
-                bestTranspose = transpose;
-            }
-        }
-
-        return bestTranspose;
-    }
-
-    private static int NaturalOctaveOffset(int note, int transpose, int low, int high)
-    {
-        var shifted = note + transpose;
-        var offset = 0;
-        while (shifted + 12 * offset < low)
-        {
-            offset++;
-        }
-
-        while (shifted + 12 * offset > high)
-        {
-            offset--;
-        }
-
-        return offset;
     }
 
     private static HashSet<int> FindCollidingPitches(
@@ -408,18 +397,6 @@ public static class NoteMapping
         return lost;
     }
 
-    private static MidiNote ScaleForScoring(MidiNote note, double speed)
-    {
-        if (speed <= 0 || double.IsNaN(speed) || double.IsInfinity(speed))
-        {
-            return note;
-        }
-
-        var start = (int)(note.StartMs / speed);
-        var end = Math.Max(start + PlaybackEventBuilder.MinimumKeyHoldMs, (int)(note.EndMs / speed));
-        return note with { StartMs = start, EndMs = end };
-    }
-
     private static string? MappedKeyForScoring(
         MidiNote note,
         MappingConfig config,
@@ -470,6 +447,186 @@ public static class NoteMapping
         }
 
         return lost;
+    }
+
+    public static int[] ResolveClusterOctaves(IReadOnlyList<MidiNote> ordered, MappingConfig config)
+    {
+        var offsets = new int[ordered.Count];
+        if (ordered.Count == 0 || config.Instrument == InstrumentKind.Drums)
+        {
+            return offsets;
+        }
+
+        var usedKeys = new HashSet<string>(StringComparer.Ordinal);
+        for (var i = 0; i < ordered.Count; i++)
+        {
+            var note = ordered[i];
+            var naturalKey = ClusterKey(note, config, 0);
+            if (naturalKey is null)
+            {
+                continue;
+            }
+
+            if (usedKeys.Add(naturalKey))
+            {
+                continue;
+            }
+
+            var natural = NaturalOctaveOffset(note.Note, config.TransposeSemitones, config.NoteRangeLow, config.NoteRangeHigh);
+            var candidates = new List<int>();
+            for (var k = -4; k <= 4; k++)
+            {
+                if (k == natural || Math.Abs(k - natural) > 2)
+                {
+                    continue;
+                }
+
+                var shifted = note.Note + config.TransposeSemitones + 12 * k;
+                if (shifted < config.NoteRangeLow || shifted > config.NoteRangeHigh)
+                {
+                    continue;
+                }
+
+                candidates.Add(k);
+            }
+
+            candidates.Sort((left, right) =>
+            {
+                var deltaLeft = Math.Abs(left - natural);
+                var deltaRight = Math.Abs(right - natural);
+                return deltaLeft != deltaRight ? deltaLeft.CompareTo(deltaRight) : left.CompareTo(right);
+            });
+
+            foreach (var candidate in candidates)
+            {
+                var key = ClusterKey(note, config, candidate);
+                if (key is not null && usedKeys.Add(key))
+                {
+                    offsets[i] = candidate;
+                    break;
+                }
+            }
+        }
+
+        return offsets;
+    }
+
+    private static string? ClusterKey(MidiNote note, MappingConfig config, int octaveOffset)
+    {
+        var shifted = note.Note + config.TransposeSemitones + 12 * octaveOffset;
+        if (config.Instrument == InstrumentKind.Microphone)
+        {
+            return MapMicrophoneKey(shifted, 0, config.CustomKeyMap, config.NoteRangeLow, config.NoteRangeHigh);
+        }
+
+        var folded = FoldToRange(shifted, config.NoteRangeLow, config.NoteRangeHigh);
+        if (config.PreferNearestWhite)
+        {
+            folded = NearestWhite(folded, config.NoteRangeLow, config.NoteRangeHigh);
+        }
+
+        return MapPianoKey(folded, config.CustomKeyMap);
+    }
+
+    private static int NaturalOctaveOffset(int note, int transpose, int low, int high)
+    {
+        var shifted = note + transpose;
+        var offset = 0;
+        while (shifted + 12 * offset < low)
+        {
+            offset++;
+        }
+
+        while (shifted + 12 * offset > high)
+        {
+            offset--;
+        }
+
+        return offset;
+    }
+
+    private static int ScoreClusteredLoss(IReadOnlyList<MidiNote> notes, MappingConfig config)
+    {
+        var windowMs = Math.Max(0, config.ChordClusterWindowMs);
+        var scaled = notes
+            .Select(note => ScaleForScoring(note, config.Speed))
+            .OrderBy(note => note.StartMs)
+            .ThenBy(note => note.EndMs)
+            .ThenByDescending(note => note.Note)
+            .ToArray();
+
+        var lost = 0;
+        foreach (var cluster in Cluster(scaled, windowMs))
+        {
+            var ordered = cluster
+                .OrderByDescending(note => note.Note)
+                .ThenByDescending(note => note.Velocity)
+                .ThenBy(note => note.EndMs)
+                .ToArray();
+            var offsets = ResolveClusterOctaves(ordered, config);
+
+            var keys = new HashSet<string>(StringComparer.Ordinal);
+            var unmapped = 0;
+            for (var i = 0; i < ordered.Length; i++)
+            {
+                var key = ClusterKey(ordered[i], config, offsets[i]);
+                if (key is null)
+                {
+                    unmapped++;
+                }
+                else
+                {
+                    keys.Add(key);
+                }
+            }
+
+            lost += unmapped;
+            lost += Math.Max(0, ordered.Length - unmapped - keys.Count);
+            lost += Math.Max(0, keys.Count - Math.Max(1, config.MaxPolyphony));
+        }
+
+        return lost;
+    }
+
+    private static MidiNote ScaleForScoring(MidiNote note, double speed)
+    {
+        if (speed <= 0 || double.IsNaN(speed) || double.IsInfinity(speed))
+        {
+            return note;
+        }
+
+        var start = (int)(note.StartMs / speed);
+        var end = Math.Max(start + PlaybackEventBuilder.MinimumKeyHoldMs, (int)(note.EndMs / speed));
+        return note with { StartMs = start, EndMs = end };
+    }
+
+    private static IEnumerable<IReadOnlyList<MidiNote>> Cluster(IReadOnlyList<MidiNote> notes, int windowMs)
+    {
+        var current = new List<MidiNote>();
+        var currentStart = 0;
+        foreach (var note in notes)
+        {
+            if (current.Count == 0)
+            {
+                current.Add(note);
+                currentStart = note.StartMs;
+            }
+            else if (note.StartMs - currentStart <= windowMs)
+            {
+                current.Add(note);
+            }
+            else
+            {
+                yield return current;
+                current = [note];
+                currentStart = note.StartMs;
+            }
+        }
+
+        if (current.Count > 0)
+        {
+            yield return current;
+        }
     }
 
 }

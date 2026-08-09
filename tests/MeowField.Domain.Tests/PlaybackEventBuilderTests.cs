@@ -47,7 +47,7 @@ public sealed class PlaybackEventBuilderTests
     }
 
     [Fact]
-    public void SmartOctaveFold_KeepsOctaveDoubledNotesDistinct()
+    public void CollisionStrategy_OriginalFold_CollapsesOctaveDoubledNotes()
     {
         MidiNote[] notes =
         [
@@ -55,9 +55,52 @@ public sealed class PlaybackEventBuilderTests
             new(0, 500, 55, 100, 0, 0),
         ];
 
-        var events = PlaybackEventBuilder.Build(notes, new MappingConfig { ChordMode = ChordMode.Off });
+        var events = PlaybackEventBuilder.Build(notes, new MappingConfig
+        {
+            ChordMode = ChordMode.Off,
+            CollisionStrategy = CollisionStrategy.OriginalFold,
+        });
+
+        // Legacy behavior: G2 folds onto G3 and both notes share the same key.
+        Assert.Equal(["G"], events.Where(item => item.Type == PlayEventType.Down).Select(item => item.Key).ToArray());
+        Assert.Equal(2, events.Count);
+    }
+
+    [Fact]
+    public void CollisionStrategy_SmartOctaveFold_KeepsOctaveDoubledNotesDistinct()
+    {
+        MidiNote[] notes =
+        [
+            new(0, 500, 43, 100, 0, 0),
+            new(0, 500, 55, 100, 0, 0),
+        ];
+
+        var events = PlaybackEventBuilder.Build(notes, new MappingConfig
+        {
+            ChordMode = ChordMode.Off,
+            CollisionStrategy = CollisionStrategy.SmartOctaveFold,
+        });
 
         // G2 is folded to G4 instead of colliding with G3, so both notes keep their own press.
+        Assert.Equal(["G", "T"], events.Where(item => item.Type == PlayEventType.Down).Select(item => item.Key).Order().ToArray());
+        Assert.Equal(4, events.Count);
+    }
+
+    [Fact]
+    public void CollisionStrategy_PerNoteMinimal_KeepsOctaveDoubledNotesDistinct()
+    {
+        MidiNote[] notes =
+        [
+            new(0, 500, 43, 100, 0, 0),
+            new(0, 500, 55, 100, 0, 0),
+        ];
+
+        var events = PlaybackEventBuilder.Build(notes, new MappingConfig
+        {
+            ChordMode = ChordMode.Off,
+            CollisionStrategy = CollisionStrategy.PerNoteMinimal,
+        });
+
         Assert.Equal(["G", "T"], events.Where(item => item.Type == PlayEventType.Down).Select(item => item.Key).Order().ToArray());
         Assert.Equal(4, events.Count);
     }
