@@ -26,6 +26,7 @@
     <ProjectReference Include="..\..\src\MeowField.Infrastructure.Windows\MeowField.Infrastructure.Windows.csproj" />
     <ProjectReference Include="..\..\src\MeowField.Infrastructure.Storage\MeowField.Infrastructure.Storage.csproj" />
     <ProjectReference Include="..\..\src\MeowField.Infrastructure.Audio\MeowField.Infrastructure.Audio.csproj" />
+    <ProjectReference Include="..\..\src\MeowField.App\MeowField.App.csproj" />
   </ItemGroup>
 
 </Project>

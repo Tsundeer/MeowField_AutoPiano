@@ -12,21 +12,25 @@ public static class LocalizationService
 {
     public static string TranslateDynamic(object? value, bool english)
     {
-        if (!english) return value?.ToString() ?? string.Empty;
-        if (value is InputMode inputMode) return inputMode == InputMode.SendInput ? "SendInput" : "Window message";
+        if (value is InputMode inputMode) return inputMode switch
+        {
+            InputMode.SendInput => english ? "SendInput" : "前台模拟按键",
+            InputMode.WindowMessage => english ? "Window message" : "窗口消息（后台）",
+            _ => inputMode.ToString(),
+        };
         if (value is InstrumentKind instrument) return instrument switch
         {
-            InstrumentKind.Piano => "Piano",
-            InstrumentKind.Drums => "Drums",
-            InstrumentKind.Microphone => "Microphone",
+            InstrumentKind.Piano => english ? "Piano" : "钢琴",
+            InstrumentKind.Drums => english ? "Drums" : "架子鼓",
+            InstrumentKind.Microphone => english ? "Microphone" : "麦克风",
             _ => instrument.ToString(),
         };
         if (value is ChordMode chordMode) return chordMode switch
         {
-            ChordMode.Off => "Off",
-            ChordMode.Prefer => "Prefer chords",
-            ChordMode.Melody => "Melody first",
-            ChordMode.Smart => "Smart",
+            ChordMode.Off => english ? "Off" : "关闭",
+            ChordMode.Prefer => english ? "Prefer chords" : "优先和弦",
+            ChordMode.Melody => english ? "Melody first" : "优先旋律",
+            ChordMode.Smart => english ? "Smart" : "智能识别",
             _ => chordMode.ToString(),
         };
         if (value is CollisionStrategy collisionStrategy) return collisionStrategy switch
@@ -36,6 +40,8 @@ public static class LocalizationService
             CollisionStrategy.PerNoteMinimal => english ? "Minimal per-note shift" : "逐音符最小移位",
             _ => collisionStrategy.ToString(),
         };
+
+        if (!english) return value?.ToString() ?? string.Empty;
 
         var text = value?.ToString() ?? string.Empty;
         var exact = text switch
