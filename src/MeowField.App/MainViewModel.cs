@@ -391,7 +391,11 @@ public partial class MainViewModel : ObservableObject, IDisposable
             UpdateStatus = IsEnglish ? $"Downloading {tag}..." : $"正在下载 {tag} 安装包...";
             var updateDirectory = Path.Combine(Path.GetTempPath(), "MeowField_AutoPiano", "updates");
             Directory.CreateDirectory(updateDirectory);
-            installerPath = Path.Combine(updateDirectory, Path.GetFileName(assetName));
+            // Use a unique path so a failed/previous updater process can never lock
+            // the destination of a new download.
+            installerPath = Path.Combine(
+                updateDirectory,
+                $"{Path.GetFileNameWithoutExtension(assetName)}-{Guid.NewGuid():N}.exe");
             using (var download = await client.GetAsync(assetUrl, HttpCompletionOption.ResponseHeadersRead))
             {
                 download.EnsureSuccessStatusCode();
@@ -415,13 +419,17 @@ public partial class MainViewModel : ObservableObject, IDisposable
                         UpdateProgressText = FormatUpdateProgress(read, totalBytes);
                     }
                 }
+                await destination.FlushAsync();
             }
 
-            var launcherPath = Path.Combine(updateDirectory, "apply-update.cmd");
+            var launcherPath = Path.Combine(updateDirectory, $"apply-update-{Guid.NewGuid():N}.cmd");
             var quotedInstaller = installerPath.Replace("%", "%%");
             var quotedLauncher = launcherPath.Replace("%", "%%");
+            var currentProcessId = Environment.ProcessId;
             var launcher = $"@echo off\r\n" +
-                "timeout /t 2 /nobreak >nul\r\n" +
+                $":wait_for_app\r\n" +
+                $"tasklist /fi \"PID eq {currentProcessId}\" | findstr /r /c:\" {currentProcessId} \" >nul\r\n" +
+                "if not errorlevel 1 (timeout /t 1 /nobreak >nul & goto wait_for_app)\r\n" +
                 $"\"{quotedInstaller}\" /NORESTART\r\n" +
                 "set EXITCODE=%ERRORLEVEL%\r\n" +
                 $"del /f /q \"{quotedInstaller}\" >nul 2>&1\r\n" +
