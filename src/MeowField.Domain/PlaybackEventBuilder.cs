@@ -2,7 +2,10 @@ namespace MeowField.Domain;
 
 public static class PlaybackEventBuilder
 {
-    internal const int MinimumKeyHoldMs = 45;
+    // Keep short notes distinct while leaving enough time for Windows/game input queues.
+    internal const int MinimumKeyHoldMs = 8;
+
+    private readonly record struct MappedNote(string Key, int Velocity, int Start, int End);
 
     public static IReadOnlyList<PlayEvent> Build(IReadOnlyList<MidiNote> notes, MappingConfig config)
     {
@@ -85,19 +88,18 @@ public static class PlaybackEventBuilder
                     ? NoteMapping.MapMicrophoneKey(note.Note + perNoteOffsets[index] * 12, config.TransposeSemitones, config.CustomKeyMap, config.NoteRangeLow, config.NoteRangeHigh)
                     : NoteMapping.MapPianoKey(Normalize(note.Note, config, perNoteOffsets[index]), config.CustomKeyMap)))
                 .Where(entry => entry.Key is not null)
-                .GroupBy(entry => entry.Key!, StringComparer.Ordinal)
-                .Select(entry => new
-                {
-                    Key = entry.Key,
-                    Velocity = entry.Max(item => item.Note.Velocity),
-                    Start = entry.Min(item => item.Note.StartMs),
-                    End = entry.Max(item => item.Note.EndMs),
-                })
+                .Select(entry => new MappedNote(entry.Key!, entry.Note.Velocity, entry.Note.StartMs, entry.Note.EndMs))
+                .GroupBy(entry => entry.Key, StringComparer.Ordinal)
+                // Max polyphony limits simultaneous keys, not repeated notes on one key.
+                .OrderByDescending(entry => entry.Max(item => item.Velocity))
+                .ThenBy(entry => entry.Min(item => item.Start))
+                .ThenBy(entry => entry.Key, StringComparer.Ordinal)
+                .Take(Math.Max(1, config.MaxPolyphony))
+                .SelectMany(SplitOverlappingNotes)
                 .OrderByDescending(entry => entry.Velocity)
                 .ThenBy(entry => entry.Start)
                 .ThenBy(entry => entry.End)
-                .ThenBy(entry => entry.Key, StringComparer.Ordinal)
-                .Take(Math.Max(1, config.MaxPolyphony));
+                .ThenBy(entry => entry.Key, StringComparer.Ordinal);
 
             foreach (var entry in mapped)
             {
@@ -107,6 +109,42 @@ public static class PlaybackEventBuilder
         }
 
         return Sort(events);
+    }
+
+    private static IEnumerable<MappedNote> SplitOverlappingNotes(IEnumerable<MappedNote> notes)
+    {
+        var ordered = notes.OrderBy(note => note.Start).ThenBy(note => note.End).ToArray();
+        if (ordered.Length == 0)
+        {
+            yield break;
+        }
+
+        var current = ordered[0];
+        foreach (var next in ordered.Skip(1))
+        {
+            // A repeated mapped key must be released when the next note arrives.
+            // Notes sharing the exact start cannot be distinguished on the target
+            // keyboard, so retain the stronger/longer one as a single press.
+            if (next.Start == current.Start)
+            {
+                current = current with
+                {
+                    Velocity = Math.Max(current.Velocity, next.Velocity),
+                    End = Math.Max(current.End, next.End),
+                };
+                continue;
+            }
+
+            if (next.Start < current.End)
+            {
+                current = current with { End = next.Start };
+            }
+
+            yield return current;
+            current = next;
+        }
+
+        yield return current;
     }
 
     private static Func<MidiNote, MidiNote> Scale(double speed) => note =>
@@ -165,7 +203,7 @@ public static class PlaybackEventBuilder
 
     private static IReadOnlyList<PlayEvent> Sort(IEnumerable<PlayEvent> events) => events
         .OrderBy(item => item.TimeMs)
-        .ThenBy(item => item.Type == PlayEventType.Down ? 0 : 1)
+        .ThenBy(item => item.Type == PlayEventType.Up ? 0 : 1)
         .ThenBy(item => item.Key, StringComparer.Ordinal)
         .ToArray();
 }

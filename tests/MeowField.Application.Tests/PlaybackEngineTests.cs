@@ -118,19 +118,24 @@ public sealed class PlaybackEngineTests
     }
 
     [Fact]
-    public void OverlappingNotesMappedToSameKey_ReleaseOnlyAfterLastNoteEnds()
+    public void OverlappingNotesMappedToSameKey_RetriggersAtNextNote()
     {
         var sink = new RecordingInputSink();
         using var engine = new PlaybackEngine(sink);
         var map = new Dictionary<int, string> { [60] = "Q", [62] = "Q" };
         var midi = new ParsedMidi([new MidiNote(0, 80, 60, 100, 0, 0), new MidiNote(20, 140, 62, 100, 0, 0)], 140);
-        engine.Load(midi, new MappingConfig { ChordMode = ChordMode.Off, CustomKeyMap = map });
+        engine.Load(midi, new MappingConfig
+        {
+            ChordMode = ChordMode.Off,
+            CollisionStrategy = CollisionStrategy.OriginalFold,
+            CustomKeyMap = map,
+        });
 
         engine.Play(123);
         Assert.True(SpinWait.SpinUntil(() => engine.Snapshot.State == PlaybackState.Stopped, 1000));
 
-        Assert.Single(sink.Sent, item => item.Type == PlayEventType.Down);
-        Assert.Single(sink.Sent, item => item.Type == PlayEventType.Up);
+        Assert.Equal(2, sink.Sent.Count(item => item.Type == PlayEventType.Down));
+        Assert.Equal(2, sink.Sent.Count(item => item.Type == PlayEventType.Up));
     }
 
     [Fact]

@@ -180,6 +180,50 @@ public sealed class PlaybackEventBuilderTests
         var events = PlaybackEventBuilder.Build(notes, config);
 
         Assert.Equal(4, events[0].TimeMs);
-        Assert.Equal(49, events[1].TimeMs);
+        Assert.Equal(12, events[1].TimeMs);
+    }
+
+    [Fact]
+    public void RapidRepeatedNotesOnSameKeyRemainSeparate()
+    {
+        MidiNote[] notes =
+        [
+            new(0, 5, 60, 100, 0, 0),
+            new(20, 25, 60, 100, 0, 0),
+        ];
+
+        var events = PlaybackEventBuilder.Build(notes, new MappingConfig
+        {
+            ChordMode = ChordMode.Off,
+            ChordClusterWindowMs = 40,
+            CollisionStrategy = CollisionStrategy.OriginalFold,
+        });
+
+        Assert.Equal(2, events.Count(item => item.Type == PlayEventType.Down));
+        Assert.Equal(2, events.Count(item => item.Type == PlayEventType.Up));
+        Assert.Equal([0, 8, 20, 28], events.Select(item => item.TimeMs).ToArray());
+    }
+
+    [Fact]
+    public void OverlappingRepeatedNotesReleaseBeforeNextDown()
+    {
+        MidiNote[] notes =
+        [
+            new(0, 80, 60, 100, 0, 0),
+            new(30, 70, 60, 100, 0, 0),
+        ];
+
+        var events = PlaybackEventBuilder.Build(notes, new MappingConfig
+        {
+            ChordMode = ChordMode.Off,
+            ChordClusterWindowMs = 40,
+            CollisionStrategy = CollisionStrategy.OriginalFold,
+        });
+
+        Assert.Equal(2, events.Count(item => item.Type == PlayEventType.Down));
+        Assert.Equal(2, events.Count(item => item.Type == PlayEventType.Up));
+        Assert.Equal([0, 30, 30, 70], events.Select(item => item.TimeMs).ToArray());
+        Assert.Equal(PlayEventType.Up, events[1].Type);
+        Assert.Equal(PlayEventType.Down, events[2].Type);
     }
 }
