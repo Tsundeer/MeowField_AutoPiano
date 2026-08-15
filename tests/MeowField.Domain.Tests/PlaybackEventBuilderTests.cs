@@ -20,6 +20,24 @@ public sealed class PlaybackEventBuilderTests
         Assert.Contains(events, item => item.Type == PlayEventType.Down && item.Key == "Z" && item.Source == "chord");
     }
 
+    [Fact]
+    public void PreferChord_PreservesExtraMelodyNoteInSameCluster()
+    {
+        MidiNote[] notes =
+        [
+            new(100, 400, 60, 80, 0, 0),
+            new(100, 350, 64, 90, 0, 0),
+            new(100, 300, 67, 100, 0, 0),
+            new(100, 260, 69, 70, 0, 0),
+        ];
+
+        var events = PlaybackEventBuilder.Build(notes, new MappingConfig { ChordMode = ChordMode.Prefer });
+
+        Assert.Contains(events, item => item.Type == PlayEventType.Down && item.Source == "chord");
+        Assert.Contains(events, item => item.Type == PlayEventType.Down && item.Key == "Y" && item.Source == "melody");
+        Assert.Equal(2, events.Count(item => item.Type == PlayEventType.Down));
+    }
+
     [Theory]
     [InlineData(ChordMode.Melody)]
     [InlineData(ChordMode.Smart)]

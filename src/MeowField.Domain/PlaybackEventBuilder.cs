@@ -71,16 +71,32 @@ public static class PlaybackEventBuilder
             if (!microphone && config.ChordMode is ChordMode.Prefer or ChordMode.Smart)
             {
                 var normalized = ordered.Select(note => Normalize(note.Note, config, octaveOffsets)).ToArray();
-                chordKey = ChordDetector.Detect(normalized);
-                if (chordKey is not null)
+                var detection = ChordDetector.DetectWithMembers(normalized);
+                chordKey = detection?.Key;
+                if (detection is not null)
                 {
-                    events.Add(new PlayEvent(ordered.Min(note => note.StartMs), PlayEventType.Down, chordKey, "chord"));
-                    events.Add(new PlayEvent(ordered.Max(note => note.EndMs), PlayEventType.Up, chordKey, "chord"));
+                    events.Add(new PlayEvent(ordered.Min(note => note.StartMs), PlayEventType.Down, detection.Value.Key, "chord"));
+                    events.Add(new PlayEvent(ordered.Max(note => note.EndMs), PlayEventType.Up, detection.Value.Key, "chord"));
+
+                    if (config.ChordMode == ChordMode.Prefer)
+                    {
+                        // Consume one source note for each chord tone. Extra
+                        // melody notes in the same time cluster remain playable.
+                        var remainingChordTones = detection.Value.PitchClasses.ToHashSet();
+                        ordered = ordered
+                            .Where((note, index) =>
+                            {
+                                var pitchClass = ((normalized[index] % 12) + 12) % 12;
+                                return !remainingChordTones.Remove(pitchClass);
+                            })
+                            .ToArray();
+                    }
                 }
             }
 
-            // Prefer chords means the detected chord replaces the individual notes.
-            if (!microphone && config.ChordMode == ChordMode.Prefer && chordKey is not null)
+            // If every note in the cluster was consumed by the chord, no melody
+            // events remain. Extra notes continue through the normal mapping path.
+            if (!microphone && config.ChordMode == ChordMode.Prefer && chordKey is not null && ordered.Length == 0)
             {
                 continue;
             }
