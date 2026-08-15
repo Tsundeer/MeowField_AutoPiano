@@ -427,10 +427,16 @@ public partial class MainViewModel : ObservableObject, IDisposable
             var quotedLauncher = launcherPath.Replace("%", "%%");
             var currentProcessId = Environment.ProcessId;
             var launcher = $"@echo off\r\n" +
-                $":wait_for_app\r\n" +
-                $"tasklist /fi \"PID eq {currentProcessId}\" | findstr /r /c:\" {currentProcessId} \" >nul\r\n" +
-                "if not errorlevel 1 (timeout /t 1 /nobreak >nul & goto wait_for_app)\r\n" +
-                $"\"{quotedInstaller}\" /NORESTART\r\n" +
+                "set /a WAIT_COUNT=0\r\n" +
+                ":wait_for_app\r\n" +
+                $"tasklist /fi \"PID eq {currentProcessId}\" /nh | findstr /c:\"{currentProcessId}\" >nul\r\n" +
+                "if errorlevel 1 goto launch_installer\r\n" +
+                "set /a WAIT_COUNT+=1\r\n" +
+                "if %WAIT_COUNT% GEQ 30 goto launch_installer\r\n" +
+                "timeout /t 1 /nobreak >nul\r\n" +
+                "goto wait_for_app\r\n" +
+                ":launch_installer\r\n" +
+                $"start \"\" /wait \"{quotedInstaller}\" /NORESTART\r\n" +
                 "set EXITCODE=%ERRORLEVEL%\r\n" +
                 $"del /f /q \"{quotedInstaller}\" >nul 2>&1\r\n" +
                 $"del /f /q \"{quotedLauncher}\" >nul 2>&1\r\n" +
