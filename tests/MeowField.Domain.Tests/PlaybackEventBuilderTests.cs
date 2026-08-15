@@ -14,16 +14,34 @@ public sealed class PlaybackEventBuilderTests
             new(100, 300, 67, 100, 0, 0),
         ];
 
-        var events = PlaybackEventBuilder.Build(notes, new MappingConfig());
+        var events = PlaybackEventBuilder.Build(notes, new MappingConfig { ChordMode = ChordMode.Prefer });
 
-        Assert.Equal(
-            [
-                new PlayEvent(100, PlayEventType.Down, "T", "melody", 67),
-                new PlayEvent(100, PlayEventType.Down, "Z", "chord"),
-                new PlayEvent(300, PlayEventType.Up, "T", "melody", 67),
-                new PlayEvent(400, PlayEventType.Up, "Z", "chord"),
-            ],
-            events);
+        Assert.Equal(4, events.Count(item => item.Type == PlayEventType.Down));
+        Assert.Contains(events, item => item.Type == PlayEventType.Down && item.Key == "Z" && item.Source == "chord");
+        Assert.Contains(events, item => item.Type == PlayEventType.Down && item.Key == "Q");
+        Assert.Contains(events, item => item.Type == PlayEventType.Down && item.Key == "E");
+        Assert.Contains(events, item => item.Type == PlayEventType.Down && item.Key == "T");
+    }
+
+    [Theory]
+    [InlineData(ChordMode.Melody)]
+    [InlineData(ChordMode.Smart)]
+    public void NonCompressingChordModes_PreserveEveryMappedNote(ChordMode chordMode)
+    {
+        MidiNote[] notes =
+        [
+            new(100, 400, 60, 80, 0, 0),
+            new(100, 350, 64, 90, 0, 0),
+            new(100, 300, 67, 100, 0, 0),
+        ];
+
+        var events = PlaybackEventBuilder.Build(notes, new MappingConfig
+        {
+            ChordMode = chordMode,
+            MaxPolyphony = 21,
+        });
+
+        Assert.Equal(notes.Length + 1, events.Count(item => item.Type == PlayEventType.Down));
     }
 
     [Fact]

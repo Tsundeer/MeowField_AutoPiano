@@ -69,6 +69,7 @@ public sealed record MappingConfig
     public int TransposeSemitones { get; init; }
     public double Speed { get; init; } = 1.0;
     public int MaxPolyphony { get; init; } = 10;
+    // Chord triggering is enabled by default; individual notes are retained alongside it.
     public ChordMode ChordMode { get; init; } = ChordMode.Prefer;
     public CollisionStrategy CollisionStrategy { get; init; } = CollisionStrategy.PerNoteMinimal;
     public bool KeepMelodyTopNote { get; init; } = true;

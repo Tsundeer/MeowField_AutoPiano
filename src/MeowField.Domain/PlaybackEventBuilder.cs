@@ -72,20 +72,8 @@ public static class PlaybackEventBuilder
                 {
                     events.Add(new PlayEvent(ordered.Min(note => note.StartMs), PlayEventType.Down, chordKey, "chord"));
                     events.Add(new PlayEvent(ordered.Max(note => note.EndMs), PlayEventType.Up, chordKey, "chord"));
-
-                    if (config.KeepMelodyTopNote)
-                    {
-                        var melody = ordered[0];
-                        var normalizedMelody = Normalize(melody.Note, config, octaveOffsets);
-                        var melodyKey = NoteMapping.MapPianoKey(normalizedMelody, config.CustomKeyMap);
-                        if (melodyKey is not null)
-                        {
-                            events.Add(new PlayEvent(melody.StartMs, PlayEventType.Down, melodyKey, "melody", normalizedMelody));
-                            events.Add(new PlayEvent(melody.EndMs, PlayEventType.Up, melodyKey, "melody", normalizedMelody));
-                        }
-                    }
-
-                    continue;
+                    // Keep mapping the complete cluster below. The chord key is an
+                    // additional trigger, never a replacement for the source notes.
                 }
             }
 
