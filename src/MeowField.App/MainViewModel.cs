@@ -142,10 +142,10 @@ public partial class MainViewModel : ObservableObject, IDisposable
     [ObservableProperty] private int linkLatencyMs;
     [ObservableProperty] private bool preferNearestWhite = true;
     [ObservableProperty] private bool autoTranspose;
-    [ObservableProperty] private InputMode inputMode = InputMode.SendInput;
+    [ObservableProperty] private InputMode inputMode = InputMode.WindowMessage;
     [ObservableProperty] private InstrumentKind instrument = InstrumentKind.Piano;
     [ObservableProperty] private ChordMode chordMode = ChordMode.Prefer;
-    [ObservableProperty] private CollisionStrategy collisionStrategy = CollisionStrategy.PerNoteMinimal;
+    [ObservableProperty] private CollisionStrategy collisionStrategy = CollisionStrategy.OriginalFold;
     [ObservableProperty] private PlaybackState playbackState = PlaybackState.Idle;
     [ObservableProperty] private bool isBusy;
     [ObservableProperty] private int noteCount;

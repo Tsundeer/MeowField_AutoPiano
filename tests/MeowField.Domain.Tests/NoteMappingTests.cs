@@ -33,10 +33,10 @@ public sealed class NoteMappingTests
     }
 
     [Fact]
-    public void CollisionStrategy_DefaultsToPerNoteMinimal()
+    public void CollisionStrategy_DefaultsToOriginalFold()
     {
         var config = new MappingConfig();
-        Assert.Equal(CollisionStrategy.PerNoteMinimal, config.CollisionStrategy);
+        Assert.Equal(CollisionStrategy.OriginalFold, config.CollisionStrategy);
     }
 
     [Fact]

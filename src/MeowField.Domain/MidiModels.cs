@@ -61,7 +61,7 @@ public sealed record HotkeyConfig(
 public sealed record MappingConfig
 {
     public InstrumentKind Instrument { get; init; } = InstrumentKind.Piano;
-    public InputMode InputMode { get; init; } = InputMode.SendInput;
+    public InputMode InputMode { get; init; } = InputMode.WindowMessage;
     public int? MidiChannelFilter { get; init; }
     public int NoteRangeLow { get; init; } = 48;
     public int NoteRangeHigh { get; init; } = 83;
@@ -71,7 +71,7 @@ public sealed record MappingConfig
     public int MaxPolyphony { get; init; } = 10;
     // Chord triggering is enabled by default; individual notes are retained alongside it.
     public ChordMode ChordMode { get; init; } = ChordMode.Prefer;
-    public CollisionStrategy CollisionStrategy { get; init; } = CollisionStrategy.PerNoteMinimal;
+    public CollisionStrategy CollisionStrategy { get; init; } = CollisionStrategy.OriginalFold;
     public bool KeepMelodyTopNote { get; init; } = true;
     public int ChordClusterWindowMs { get; init; } = 40;
     public bool AutoTranspose { get; init; }
