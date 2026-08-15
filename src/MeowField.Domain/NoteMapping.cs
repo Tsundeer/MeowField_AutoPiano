@@ -103,7 +103,8 @@ public static class NoteMapping
         for (var transpose = -rangeLimit; transpose <= rangeLimit; transpose++)
         {
             var current = score(transpose);
-            if (current > bestScore)
+            if (current > bestScore + 1e-9 ||
+                (Math.Abs(current - bestScore) < 1e-9 && transpose < bestTranspose))
             {
                 bestScore = current;
                 bestTranspose = transpose;
@@ -165,12 +166,12 @@ public static class NoteMapping
                 ? CalculateWhiteKeyRatio(values.Select(note => note.Note), transpose)
                 : CalculateRangeFitRatio(values.Select(note => note.Note), config.NoteRangeLow, config.NoteRangeHigh, transpose);
             var ratioTie = Math.Abs(ratio - bestRatio) < 1e-9;
-            if (lost < bestLost ||
-                (lost == bestLost && ratio > bestRatio + 1e-9) ||
-                (lost == bestLost && ratioTie && Math.Abs(transpose) < Math.Abs(bestTranspose)))
+            if (ratio > bestRatio + 1e-9 ||
+                (ratioTie && lost < bestLost) ||
+                (ratioTie && lost == bestLost && transpose < bestTranspose))
             {
-                bestLost = lost;
                 bestRatio = ratio;
+                bestLost = lost;
                 bestTranspose = transpose;
             }
         }

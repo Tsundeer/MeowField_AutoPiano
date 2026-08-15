@@ -103,7 +103,7 @@ public sealed class NoteMappingTests
     }
 
     [Fact]
-    public void FindOptimalTranspose_WithMidiNotes_AchievesMinimumLostNotes()
+    public void FindOptimalTranspose_WithMidiNotes_PrioritizesWhiteKeyRatioAndLowerTranspose()
     {
         MidiNote[] notes =
         [
@@ -115,11 +115,20 @@ public sealed class NoteMappingTests
         var config = new MappingConfig { ChordMode = ChordMode.Off, CollisionStrategy = CollisionStrategy.PerNoteMinimal };
 
         var result = NoteMapping.FindOptimalTranspose(notes, config);
-        var minimumLost = Enumerable.Range(-12, 25)
-            .Min(transpose => notes.Length - PlaybackEventBuilder.Build(notes, config with { TransposeSemitones = transpose }).Count(item => item.Type == PlayEventType.Down));
-        var actualLost = notes.Length - PlaybackEventBuilder.Build(notes, config with { TransposeSemitones = result }).Count(item => item.Type == PlayEventType.Down);
+        var candidates = Enumerable.Range(-12, 25)
+            .Select(transpose => new
+            {
+                Transpose = transpose,
+                Ratio = NoteMapping.CalculateWhiteKeyRatio(notes.Select(note => note.Note), transpose),
+            })
+            .ToArray();
+        var bestRatio = candidates.Max(candidate => candidate.Ratio);
+        var expected = candidates
+            .Where(candidate => Math.Abs(candidate.Ratio - bestRatio) < 1e-9)
+            .Min(candidate => candidate.Transpose);
 
-        Assert.Equal(minimumLost, actualLost);
+        Assert.Equal(expected, result);
+        Assert.Equal(bestRatio, NoteMapping.CalculateWhiteKeyRatio(notes.Select(note => note.Note), result));
     }
 
     [Theory]

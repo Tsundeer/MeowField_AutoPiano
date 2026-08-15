@@ -5,7 +5,7 @@ namespace MeowField.Domain.Tests;
 public sealed class PlaybackEventBuilderTests
 {
     [Fact]
-    public void PianoChord_EmitsChordAndTopMelodyLikeLegacyBuilder()
+    public void PianoChord_PreferChordReplacesSourceNotes()
     {
         MidiNote[] notes =
         [
@@ -16,17 +16,14 @@ public sealed class PlaybackEventBuilderTests
 
         var events = PlaybackEventBuilder.Build(notes, new MappingConfig { ChordMode = ChordMode.Prefer });
 
-        Assert.Equal(4, events.Count(item => item.Type == PlayEventType.Down));
+        Assert.Equal(1, events.Count(item => item.Type == PlayEventType.Down));
         Assert.Contains(events, item => item.Type == PlayEventType.Down && item.Key == "Z" && item.Source == "chord");
-        Assert.Contains(events, item => item.Type == PlayEventType.Down && item.Key == "Q");
-        Assert.Contains(events, item => item.Type == PlayEventType.Down && item.Key == "E");
-        Assert.Contains(events, item => item.Type == PlayEventType.Down && item.Key == "T");
     }
 
     [Theory]
     [InlineData(ChordMode.Melody)]
     [InlineData(ChordMode.Smart)]
-    public void NonCompressingChordModes_PreserveEveryMappedNote(ChordMode chordMode)
+    public void MelodyAndSmartChordModes_PreserveExpectedNotes(ChordMode chordMode)
     {
         MidiNote[] notes =
         [
@@ -41,7 +38,8 @@ public sealed class PlaybackEventBuilderTests
             MaxPolyphony = 21,
         });
 
-        Assert.Equal(notes.Length + 1, events.Count(item => item.Type == PlayEventType.Down));
+        Assert.Equal(chordMode == ChordMode.Melody ? notes.Length : notes.Length + 1,
+            events.Count(item => item.Type == PlayEventType.Down));
     }
 
     [Fact]

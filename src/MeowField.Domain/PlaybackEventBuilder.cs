@@ -67,17 +67,22 @@ public static class PlaybackEventBuilder
                 .ThenBy(note => note.EndMs)
                 .ToArray();
 
-            if (!microphone && config.ChordPrefer)
+            string? chordKey = null;
+            if (!microphone && config.ChordMode is ChordMode.Prefer or ChordMode.Smart)
             {
                 var normalized = ordered.Select(note => Normalize(note.Note, config, octaveOffsets)).ToArray();
-                var chordKey = ChordDetector.Detect(normalized);
+                chordKey = ChordDetector.Detect(normalized);
                 if (chordKey is not null)
                 {
                     events.Add(new PlayEvent(ordered.Min(note => note.StartMs), PlayEventType.Down, chordKey, "chord"));
                     events.Add(new PlayEvent(ordered.Max(note => note.EndMs), PlayEventType.Up, chordKey, "chord"));
-                    // Keep mapping the complete cluster below. The chord key is an
-                    // additional trigger, never a replacement for the source notes.
                 }
+            }
+
+            // Prefer chords means the detected chord replaces the individual notes.
+            if (!microphone && config.ChordMode == ChordMode.Prefer && chordKey is not null)
+            {
+                continue;
             }
 
             var perNoteOffsets = config.CollisionStrategy == CollisionStrategy.PerNoteMinimal
