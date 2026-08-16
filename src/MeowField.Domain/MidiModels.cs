@@ -54,6 +54,12 @@ public enum CollisionStrategy
     PerNoteMinimal,
 }
 
+public enum NearestWhiteDirection
+{
+    Down,
+    Up,
+}
+
 public sealed record HotkeyConfig(
     string PlayPause = "ctrl+shift+c",
     string Stop = "f9");
@@ -66,6 +72,7 @@ public sealed record MappingConfig
     public int NoteRangeLow { get; init; } = 48;
     public int NoteRangeHigh { get; init; } = 83;
     public bool PreferNearestWhite { get; init; } = true;
+    public NearestWhiteDirection NearestWhiteDirection { get; init; } = NearestWhiteDirection.Down;
     public int TransposeSemitones { get; init; }
     public double Speed { get; init; } = 1.0;
     public int MaxPolyphony { get; init; } = 10;

@@ -117,6 +117,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     [ObservableProperty] private InstrumentChoice? selectedInstrumentChoice;
     public IReadOnlyList<ChordMode> ChordModes { get; } = Enum.GetValues<ChordMode>();
     public IReadOnlyList<CollisionStrategy> CollisionStrategies { get; } = Enum.GetValues<CollisionStrategy>();
+    public IReadOnlyList<NearestWhiteDirection> NearestWhiteDirections { get; } = Enum.GetValues<NearestWhiteDirection>();
     public ObservableCollection<KeyboardKeyState> KeyboardKeys { get; } = [];
     [ObservableProperty] private string keyboardCountText = "21 键";
     [ObservableProperty] private int keyboardColumns = 7;
@@ -141,6 +142,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     [ObservableProperty] private int maxPolyphony = 10;
     [ObservableProperty] private int linkLatencyMs;
     [ObservableProperty] private bool preferNearestWhite = true;
+    [ObservableProperty] private NearestWhiteDirection nearestWhiteDirection = NearestWhiteDirection.Down;
     [ObservableProperty] private bool autoTranspose;
     [ObservableProperty] private InputMode inputMode = InputMode.WindowMessage;
     [ObservableProperty] private InstrumentKind instrument = InstrumentKind.Piano;
@@ -532,6 +534,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         NoteRangeLow = NoteRangeLow,
         NoteRangeHigh = NoteRangeHigh,
         PreferNearestWhite = PreferNearestWhite,
+        NearestWhiteDirection = NearestWhiteDirection,
         TransposeSemitones = Transpose,
         Speed = Speed,
         MaxPolyphony = MaxPolyphony,
@@ -567,6 +570,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
             ChordMode = config.ChordMode;
             CollisionStrategy = config.CollisionStrategy;
             PreferNearestWhite = config.PreferNearestWhite;
+            NearestWhiteDirection = config.NearestWhiteDirection;
             AutoTranspose = config.AutoTranspose;
             LinkLatencyMs = config.LinkLatencyMs;
             CustomKeyMap = config.CustomKeyMap;
@@ -665,6 +669,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     partial void OnMaxPolyphonyChanged(int value) { InvalidateProfileSelection(); ScheduleSettingsSave(); SchedulePlaybackConfigRefresh(); }
     partial void OnLinkLatencyMsChanged(int value) { InvalidateProfileSelection(); ScheduleSettingsSave(); SchedulePlaybackConfigRefresh(); }
     partial void OnPreferNearestWhiteChanged(bool value) { InvalidateProfileSelection(); ScheduleSettingsSave(); SchedulePlaybackConfigRefresh(); }
+    partial void OnNearestWhiteDirectionChanged(NearestWhiteDirection value) { InvalidateProfileSelection(); ScheduleSettingsSave(); SchedulePlaybackConfigRefresh(); }
     partial void OnAutoTransposeChanged(bool value) { InvalidateProfileSelection(); ScheduleSettingsSave(); }
     partial void OnInputModeChanged(InputMode value) { InvalidateProfileSelection(); ScheduleSettingsSave(); SchedulePlaybackConfigRefresh(); }
     partial void OnChordModeChanged(ChordMode value) { InvalidateProfileSelection(); ScheduleSettingsSave(); SchedulePlaybackConfigRefresh(); }

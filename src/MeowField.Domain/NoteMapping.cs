@@ -49,7 +49,7 @@ public static class NoteMapping
         return result;
     }
 
-    public static int NearestWhite(int note, int low = 48, int high = 83)
+    public static int NearestWhite(int note, int low = 48, int high = 83, NearestWhiteDirection direction = NearestWhiteDirection.Down)
     {
         if (WhitePitchClasses.Contains(Mod12(note)))
         {
@@ -63,7 +63,7 @@ public static class NoteMapping
 
         return (downValid, upValid) switch
         {
-            (true, true) => down,
+            (true, true) => direction == NearestWhiteDirection.Up ? up : down,
             (true, false) => down,
             (false, true) => up,
             _ => Math.Clamp(note, low, high),
@@ -412,7 +412,7 @@ public static class NoteMapping
         var folded = FoldToRange(shifted, config.NoteRangeLow, config.NoteRangeHigh);
         if (config.PreferNearestWhite)
         {
-            folded = NearestWhite(folded, config.NoteRangeLow, config.NoteRangeHigh);
+            folded = NearestWhite(folded, config.NoteRangeLow, config.NoteRangeHigh, config.NearestWhiteDirection);
         }
 
         return MapPianoKey(folded, config.CustomKeyMap);
@@ -523,7 +523,7 @@ public static class NoteMapping
         var folded = FoldToRange(shifted, config.NoteRangeLow, config.NoteRangeHigh);
         if (config.PreferNearestWhite)
         {
-            folded = NearestWhite(folded, config.NoteRangeLow, config.NoteRangeHigh);
+            folded = NearestWhite(folded, config.NoteRangeLow, config.NoteRangeHigh, config.NearestWhiteDirection);
         }
 
         return MapPianoKey(folded, config.CustomKeyMap);

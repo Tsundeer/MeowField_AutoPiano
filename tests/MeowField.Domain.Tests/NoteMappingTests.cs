@@ -24,6 +24,12 @@ public sealed class NoteMappingTests
     }
 
     [Fact]
+    public void NearestWhite_CanPreferUpperNoteOnTie()
+    {
+        Assert.Equal(62, NoteMapping.NearestWhite(61, direction: NearestWhiteDirection.Up));
+    }
+
+    [Fact]
     public void FindOptimalTranspose_UsesFirstStrictlyBetterCandidate()
     {
         var notes = new[] { 61, 63, 66 };

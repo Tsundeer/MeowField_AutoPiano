@@ -180,7 +180,7 @@ public static class PlaybackEventBuilder
         var shifted = note + config.TransposeSemitones + (octaveOffsets?.GetValueOrDefault(note) ?? 0) * 12;
         var normalized = NoteMapping.FoldToRange(shifted, config.NoteRangeLow, config.NoteRangeHigh);
         return config.PreferNearestWhite
-            ? NoteMapping.NearestWhite(normalized, config.NoteRangeLow, config.NoteRangeHigh)
+            ? NoteMapping.NearestWhite(normalized, config.NoteRangeLow, config.NoteRangeHigh, config.NearestWhiteDirection)
             : normalized;
     }
 
@@ -189,7 +189,7 @@ public static class PlaybackEventBuilder
         var shifted = note + config.TransposeSemitones + octaveOffset * 12;
         var normalized = NoteMapping.FoldToRange(shifted, config.NoteRangeLow, config.NoteRangeHigh);
         return config.PreferNearestWhite
-            ? NoteMapping.NearestWhite(normalized, config.NoteRangeLow, config.NoteRangeHigh)
+            ? NoteMapping.NearestWhite(normalized, config.NoteRangeLow, config.NoteRangeHigh, config.NearestWhiteDirection)
             : normalized;
     }
 

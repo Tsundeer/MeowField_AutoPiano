@@ -31,6 +31,7 @@ public sealed class GameProfileProvider(string profilesDirectory) : IGameProfile
                 NoteRangeLow = data.NoteRangeLow ?? 48,
                 NoteRangeHigh = data.NoteRangeHigh ?? 83,
                 PreferNearestWhite = data.PreferNearestWhite ?? true,
+                NearestWhiteDirection = ParseNearestWhiteDirection(data.NearestWhiteDirection),
                 TransposeSemitones = data.TransposeSemitones,
                 Speed = data.Speed,
                 MaxPolyphony = data.MaxPolyphony,
@@ -63,6 +64,12 @@ public sealed class GameProfileProvider(string profilesDirectory) : IGameProfile
         _ => ChordMode.Prefer,
     };
 
+    private static NearestWhiteDirection ParseNearestWhiteDirection(string? value) => value?.ToLowerInvariant() switch
+    {
+        "up" => NearestWhiteDirection.Up,
+        _ => NearestWhiteDirection.Down,
+    };
+
     private sealed record ProfileDto
     {
         public string Id { get; init; } = "";
@@ -73,6 +80,7 @@ public sealed class GameProfileProvider(string profilesDirectory) : IGameProfile
         [JsonPropertyName("note_range_low")] public int? NoteRangeLow { get; init; }
         [JsonPropertyName("note_range_high")] public int? NoteRangeHigh { get; init; }
         [JsonPropertyName("prefer_nearest_white")] public bool? PreferNearestWhite { get; init; }
+        [JsonPropertyName("nearest_white_direction")] public string? NearestWhiteDirection { get; init; }
         [JsonPropertyName("transpose_semitones")] public int TransposeSemitones { get; init; }
         public double Speed { get; init; } = 1;
         [JsonPropertyName("max_polyphony")] public int MaxPolyphony { get; init; } = 10;

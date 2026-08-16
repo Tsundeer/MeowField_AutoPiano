@@ -33,6 +33,11 @@ public static class LocalizationService
             ChordMode.Smart => english ? "Smart" : "智能识别",
             _ => chordMode.ToString(),
         };
+        if (value is NearestWhiteDirection direction) return direction switch
+        {
+            NearestWhiteDirection.Up => english ? "Map upward" : "向上映射",
+            _ => english ? "Map downward" : "向下映射",
+        };
         if (value is CollisionStrategy collisionStrategy) return collisionStrategy switch
         {
             CollisionStrategy.OriginalFold => english ? "Original fold" : "原版折叠",
