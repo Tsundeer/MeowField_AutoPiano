@@ -1,5 +1,7 @@
 using System.Windows;
 using System.IO;
+using System.Diagnostics;
+using System.Security.Principal;
 using MeowField.Application;
 using MeowField.Infrastructure.Midi;
 using MeowField.Infrastructure.Audio;
@@ -26,6 +28,31 @@ public partial class App : System.Windows.Application
             .WriteTo.File(Path.Combine(logDirectory, "app-.log"), rollingInterval: RollingInterval.Day, retainedFileCountLimit: 14, shared: true)
             .CreateLogger();
         DispatcherUnhandledException += OnDispatcherUnhandledException;
+
+        // 启动时若不是管理员，自动以管理员身份重新拉起自身（用户可在 UAC 提示里取消，
+        // 取消后退回普通权限运行，仅部分游戏窗口的按键可能不稳定）。
+        if (!IsRunningAsAdministrator())
+        {
+            try
+            {
+                var exePath = Process.GetCurrentProcess().MainModule?.FileName;
+                if (exePath is not null)
+                {
+                    var args = string.Join(" ", e.Args.Select(a => a.Contains(' ') ? $"\"{a}\"" : a));
+                    Process.Start(new ProcessStartInfo(exePath, args)
+                    {
+                        UseShellExecute = true,
+                        Verb = "runas",
+                    });
+                    Shutdown(0);
+                    return;
+                }
+            }
+            catch (Exception exception)
+            {
+                Log.Warning(exception, "管理员提权已取消，将以普通权限运行");
+            }
+        }
 
         try
         {
@@ -77,6 +104,12 @@ public partial class App : System.Windows.Application
                 MessageBoxImage.Error);
             Shutdown(1);
         }
+    }
+
+    private static bool IsRunningAsAdministrator()
+    {
+        using var identity = WindowsIdentity.GetCurrent();
+        return new WindowsPrincipal(identity).IsInRole(WindowsBuiltInRole.Administrator);
     }
 
     private static void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
