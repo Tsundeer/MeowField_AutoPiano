@@ -5,7 +5,7 @@
     <Grid Margin="24,20,24,18">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="12" />
+            <RowDefinition Height="14" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="10" />
             <RowDefinition Height="Auto" />
@@ -14,55 +14,159 @@
             <RowDefinition Height="12" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
+
+        <!-- 标题 + 刷新 -->
         <Grid>
             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-            <StackPanel>
-                <TextBlock Style="{StaticResource HeadingText}" Text="在线曲库" />
-            </StackPanel>
-            <Button Grid.Column="1" Style="{StaticResource PrimaryButton}" Command="{Binding RefreshCommand}">
+            <TextBlock Style="{StaticResource HeadingText}" Text="在线曲库" />
+            <Button Grid.Column="1" Style="{StaticResource PrimaryButton}" MinWidth="110" Command="{Binding RefreshCommand}">
                 <StackPanel Orientation="Horizontal"><iconPacks:PackIconLucide Kind="RefreshCw" Width="15" Height="15" /><TextBlock Margin="7,0,0,0" Text="刷新曲库" /></StackPanel>
             </Button>
         </Grid>
+
+        <!-- 搜索行：带内嵌图标的搜索框 + 占位提示 -->
         <Grid Grid.Row="2">
-            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-            <TextBox Text="{Binding Query, UpdateSourceTrigger=PropertyChanged}" ToolTip="搜索曲名、分类或大小" />
-            <Button Grid.Column="1" Margin="8,0,0,0" Command="{Binding SearchCommand}"><StackPanel Orientation="Horizontal"><iconPacks:PackIconLucide Kind="Search" Width="15" Height="15" /><TextBlock Margin="7,0,0,0" Text="搜索" /></StackPanel></Button>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="10" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <Grid>
+                <iconPacks:PackIconLucide Kind="Search" Width="15" Height="15" Margin="14,0,0,0" HorizontalAlignment="Left" Foreground="{DynamicResource Brush.Text.Secondary}" />
+                <TextBox Padding="38,6,12,6" Text="{Binding Query, UpdateSourceTrigger=PropertyChanged}" ToolTip="搜索曲名、分类或大小" />
+                <TextBlock Text="搜索曲名、分类或大小" Margin="39,0,0,0" IsHitTestVisible="False">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock" BasedOn="{StaticResource SecondaryText}">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Query}" Value="">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+            </Grid>
+            <Button Grid.Column="2" MinWidth="96" Command="{Binding SearchCommand}">
+                <StackPanel Orientation="Horizontal"><iconPacks:PackIconLucide Kind="Search" Width="15" Height="15" /><TextBlock Margin="7,0,0,0" Text="搜索" /></StackPanel>
+            </Button>
         </Grid>
+
+        <!-- 筛选行：分类 / 大小 / 排序 + 右侧计数 -->
         <Grid Grid.Row="4">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="10" />
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="10" />
-                <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <ComboBox MinWidth="150" ItemsSource="{Binding Categories}" DisplayMemberPath="Display" SelectedValuePath="Key" SelectedValue="{Binding SelectedCategoryKey}" />
-            <ComboBox Grid.Column="2" MinWidth="110" ItemsSource="{Binding SizeOptions}" SelectedItem="{Binding SizeFilter}" />
-            <ComboBox Grid.Column="4" MinWidth="130" ItemsSource="{Binding SortOptions}" SelectedItem="{Binding SortMode}" />
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="分类" Style="{StaticResource SecondaryText}" Margin="0,0,8,0" />
+                <ComboBox MinWidth="150" ItemsSource="{Binding Categories}" SelectedValuePath="Key" SelectedValue="{Binding SelectedCategoryKey}">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate><TextBlock Text="{Binding Display}" /></DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+                <TextBlock Text="大小" Style="{StaticResource SecondaryText}" Margin="16,0,8,0" />
+                <ComboBox MinWidth="110" ItemsSource="{Binding SizeOptions}" SelectedItem="{Binding SizeFilter}" />
+                <TextBlock Text="排序" Style="{StaticResource SecondaryText}" Margin="16,0,8,0" />
+                <ComboBox MinWidth="120" ItemsSource="{Binding SortOptions}" SelectedItem="{Binding SortMode}" />
+                <CheckBox Content="只看收藏" IsChecked="{Binding OnlyFavorites}" VerticalAlignment="Center" Margin="16,0,0,0" ToolTip="只显示已收藏的曲目" />
+            </StackPanel>
+            <TextBlock Grid.Column="2" Style="{StaticResource SecondaryText}" Margin="12,0,0,0" Text="{Binding Total, StringFormat=共 {0:N0} 首}" />
         </Grid>
-        <Border Grid.Row="6" Background="{DynamicResource Brush.Surface.Panel}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1" CornerRadius="6">
-            <DataGrid ItemsSource="{Binding TracksView}" SelectedItem="{Binding SelectedTrack}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" HeadersVisibility="Column" GridLinesVisibility="None" BorderThickness="0" RowHeight="42"
-                      EnableRowVirtualization="True" EnableColumnVirtualization="True"
-                      VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
-                      ScrollViewer.CanContentScroll="True">
-                <DataGrid.RowStyle>
-                    <Style TargetType="DataGridRow">
-                        <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Default}" />
-                        <Setter Property="BorderThickness" Value="0,0,0,1" />
-                    </Style>
-                </DataGrid.RowStyle>
-                <DataGrid.Columns>
-                    <DataGridTextColumn Header="曲名" Binding="{Binding Name}" Width="2*" />
-                    <DataGridTextColumn Header="分类" Binding="{Binding DisplayCategory}" Width="*" />
-                    <DataGridTextColumn Header="大小" Binding="{Binding Bytes, StringFormat={}{0:N0} B}" Width="100" />
-                </DataGrid.Columns>
-            </DataGrid>
+
+        <!-- 曲目列表卡片 -->
+        <Border Grid.Row="6" Background="{DynamicResource Brush.Surface.Panel}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1" CornerRadius="8">
+            <Grid>
+                <DataGrid x:Name="TracksGrid" ItemsSource="{Binding TracksView}" SelectedItem="{Binding SelectedTrack}"
+                          AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True"
+                          RowHeight="48" RowStyle="{StaticResource ListItemRowStyle}"
+                          EnableRowVirtualization="True" EnableColumnVirtualization="True"
+                          VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
+                          ScrollViewer.CanContentScroll="True" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                          MouseDoubleClick="OnTracksDoubleClick">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="曲名" Binding="{Binding Name}" Width="2*">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Margin" Value="12,0" />
+                                    <Setter Property="VerticalAlignment" Value="Center" />
+                                    <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+                                    <Setter Property="ToolTip" Value="{Binding Name}" />
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                        <DataGridTemplateColumn Header="分类" Width="180">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Border Background="{DynamicResource Brush.Surface.Subtle}" CornerRadius="999" Padding="10,3" Margin="12,0" HorizontalAlignment="Left">
+                                        <TextBlock Text="{Binding DisplayCategory}" FontSize="12" Foreground="{DynamicResource Brush.Text.Secondary}" />
+                                    </Border>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTextColumn Header="大小" Binding="{Binding SizeLabel}" Width="90" HeaderStyle="{StaticResource RightAlignedColumnHeader}">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="HorizontalAlignment" Value="Right" />
+                                    <Setter Property="Margin" Value="12,0" />
+                                    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Secondary}" />
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                        <DataGridTemplateColumn Width="68">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                        <Button Style="{StaticResource IconButton}" Width="26" Height="26" Padding="4" Margin="0,0,2,0"
+                                                Command="{Binding DataContext.ToggleFavoriteCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" CommandParameter="{Binding}" ToolTip="收藏">
+                                            <iconPacks:PackIconLucide Kind="Star" Width="13" Height="13">
+                                                <iconPacks:PackIconLucide.Style>
+                                                    <Style TargetType="iconPacks:PackIconLucide">
+                                                        <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Secondary}" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsFavorite}" Value="True">
+                                                                <Setter Property="Foreground" Value="{DynamicResource Brush.Accent.Primary}" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </iconPacks:PackIconLucide.Style>
+                                            </iconPacks:PackIconLucide>
+                                        </Button>
+                                        <Button Style="{StaticResource IconButton}" Width="26" Height="26" Padding="4"
+                                                Command="{Binding DataContext.DownloadTrackCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" CommandParameter="{Binding}" ToolTip="下载到本地">
+                                            <iconPacks:PackIconLucide Kind="Download" Width="13" Height="13" Foreground="{DynamicResource Brush.Text.Secondary}" />
+                                        </Button>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
+                <!-- 空状态 -->
+                <StackPanel IsHitTestVisible="False" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <StackPanel.Style>
+                        <Style TargetType="StackPanel">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Total}" Value="0">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </StackPanel.Style>
+                    <iconPacks:PackIconLucide Kind="Music" Width="32" Height="32" HorizontalAlignment="Center" Foreground="{DynamicResource Brush.Text.Secondary}" Opacity="0.55" />
+                    <TextBlock Text="没有找到匹配的曲目" Margin="0,12,0,0" HorizontalAlignment="Center" Style="{StaticResource SecondaryText}" />
+                    <TextBlock Text="换个关键词或筛选条件试试" Margin="0,4,0,0" HorizontalAlignment="Center" FontSize="12" Opacity="0.75" Foreground="{DynamicResource Brush.Text.Secondary}" />
+                </StackPanel>
+            </Grid>
         </Border>
+
+        <!-- 状态 + 加载播放 -->
         <Grid Grid.Row="8">
             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
             <TextBlock Style="{StaticResource SecondaryText}" Text="{Binding StatusText}" TextTrimming="CharacterEllipsis" />
-            <Button Grid.Column="1" Style="{StaticResource PrimaryButton}" Command="{Binding LoadSelectedCommand}">
+            <Button Grid.Column="1" Style="{StaticResource PrimaryButton}" MinWidth="130" Command="{Binding LoadSelectedCommand}">
                 <StackPanel Orientation="Horizontal"><iconPacks:PackIconLucide Kind="Play" Width="15" Height="15" /><TextBlock Margin="7,0,0,0" Text="加载播放" /></StackPanel>
             </Button>
         </Grid>

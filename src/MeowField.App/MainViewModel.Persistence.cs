@@ -21,7 +21,9 @@ public partial class MainViewModel
             ApplyConfig(settings.Mapping);
             _profileApplied = settings.SelectedGameProfileId is not null;
             AutoTranspose = settings.Mapping.AutoTranspose;
-            AutoPlayNext = settings.AutoPlayNext;
+            PlaybackMode = Enum.TryParse<PlaybackMode>(settings.PlaybackMode, out var mode)
+                ? mode
+                : settings.AutoPlayNext ? PlaybackMode.LoopAll : PlaybackMode.Sequential;
             Profiles.SelectProfileById(settings.SelectedGameProfileId);
             await Converter.RestoreExecutablePathAsync(settings.PianoTransPath);
             Queue.Clear();
@@ -55,7 +57,8 @@ public partial class MainViewModel
                 DrumKeyMap = _profileApplied ? _drumKeyMap : Instrument == InstrumentKind.Drums ? CustomKeyMap : _drumKeyMap,
                 MicrophoneKeyMap = _profileApplied ? _microphoneKeyMap : Instrument == InstrumentKind.Microphone ? CustomKeyMap : _microphoneKeyMap,
                 PianoTransPath = Converter.ConfiguredExecutablePath,
-                AutoPlayNext = AutoPlayNext,
+                AutoPlayNext = PlaybackMode != PlaybackMode.Sequential,
+                PlaybackMode = PlaybackMode.ToString(),
                 SelectedGameProfileId = Profiles.SelectedProfile?.Id,
                 BoundProcessName = SelectedWindow?.ProcessName ?? TargetProcessName,
             });

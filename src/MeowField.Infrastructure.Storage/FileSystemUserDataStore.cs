@@ -8,6 +8,7 @@ public sealed class FileSystemUserDataStore : IUserDataStore
     private readonly string _settingsPath;
     private readonly string _presetsPath;
     private readonly string _playlistPath;
+    private readonly string _favoritesPath;
 
     public FileSystemUserDataStore(string? dataDirectory = null)
     {
@@ -18,6 +19,7 @@ public sealed class FileSystemUserDataStore : IUserDataStore
         _settingsPath = Path.Combine(DataDirectory, "settings.json");
         _presetsPath = Path.Combine(DataDirectory, "presets.json");
         _playlistPath = Path.Combine(DataDirectory, "playlist.json");
+        _favoritesPath = Path.Combine(DataDirectory, "favorites.json");
     }
 
     public string DataDirectory { get; }
@@ -39,4 +41,10 @@ public sealed class FileSystemUserDataStore : IUserDataStore
 
     public Task SavePlaylistAsync(IReadOnlyList<PlaylistItem> playlist, CancellationToken cancellationToken = default) =>
         AtomicJsonFile.WriteAsync(_playlistPath, playlist, cancellationToken);
+
+    public async Task<IReadOnlyList<string>> LoadFavoriteTracksAsync(CancellationToken cancellationToken = default) =>
+        await AtomicJsonFile.ReadAsync<List<string>>(_favoritesPath, cancellationToken) ?? [];
+
+    public Task SaveFavoriteTracksAsync(IReadOnlyList<string> trackIds, CancellationToken cancellationToken = default) =>
+        AtomicJsonFile.WriteAsync(_favoritesPath, trackIds, cancellationToken);
 }

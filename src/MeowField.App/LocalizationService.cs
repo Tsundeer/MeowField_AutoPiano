@@ -38,6 +38,14 @@ public static class LocalizationService
             NearestWhiteDirection.Up => english ? "Map upward" : "向上映射",
             _ => english ? "Map downward" : "向下映射",
         };
+        if (value is PlaybackMode playbackMode) return playbackMode switch
+        {
+            PlaybackMode.Sequential => english ? "Sequential" : "顺序播放",
+            PlaybackMode.LoopAll => english ? "Loop all" : "列表循环",
+            PlaybackMode.RepeatOne => english ? "Repeat one" : "单曲循环",
+            PlaybackMode.Shuffle => english ? "Shuffle" : "随机播放",
+            _ => playbackMode.ToString(),
+        };
         if (value is CollisionStrategy collisionStrategy) return collisionStrategy switch
         {
             CollisionStrategy.OriginalFold => english ? "Original fold" : "原版折叠",
@@ -56,6 +64,10 @@ public static class LocalizationService
             "未找到可绑定窗口" => "No bindable window found",
             "请先载入 MIDI" => "Load a MIDI first",
             "窗口消息模式需要先绑定目标窗口" => "Bind a target window before using window-message mode",
+            "无法激活目标窗口" => "Cannot activate the target window",
+            "目标窗口不在前台" => "Target window is not in the foreground",
+            "尚未加载" => "Not loaded",
+            "加载中..." => "Loading...",
             "正在播放" => "Playing",
             "已暂停" => "Paused",
             "播放完成" => "Playback complete",
@@ -87,6 +99,7 @@ public static class LocalizationService
         (string Chinese, string English)[] prefixes =
         [
             ("已载入 ", "Loaded "), ("载入失败：", "Load failed: "),
+            ("加载失败：", "Load failed: "), ("下载中 ", "Downloading "),
             ("已发现 ", "Found "), ("设置恢复失败：", "Settings restore failed: "),
             ("播放失败：", "Playback failed: "), ("曲库加载失败：", "Library load failed: "),
             ("共 ", "Total: "), ("正在扫描 ", "Scanning "),
@@ -133,9 +146,11 @@ public static class LocalizationService
         ["播放"] = "Playback", ["曲库"] = "Library", ["定时任务"] = "Scheduler", ["音频转谱"] = "Audio to MIDI", ["键位与预设"] = "Keys & Presets", ["日志与诊断"] = "Logs & Diagnostics",
         ["当前："] = "Current: ",
         ["打开 MIDI"] = "Open MIDI", ["音符预览"] = "Note preview", ["音符"] = "notes", ["事件"] = "events", ["活动键位"] = "Active keys", ["虚拟键盘"] = "Virtual keyboard",
-        ["播放参数"] = "Playback parameters", ["目标窗口"] = "Target window", ["刷新窗口"] = "Refresh windows", ["输入方式"] = "Input mode", ["乐器"] = "Instrument", ["乐器 / 档案"] = "Instrument / Profile", ["和弦处理"] = "Chord handling", ["冲突处理"] = "Collision handling", ["速度"] = "Speed", ["转调"] = "Transpose", ["最大复音"] = "Max polyphony", ["链路补偿"] = "Link compensation", ["优先映射最近白键"] = "Prefer nearest white key", ["载入时自动移调"] = "Auto transpose on load", ["播放队列"] = "Play queue", ["自动下一首"] = "Auto play next", ["上一首"] = "Previous", ["下一首"] = "Next", ["移出队列"] = "Remove from queue", ["清空队列"] = "Clear queue", ["上移"] = "Move up", ["下移"] = "Move down", ["停止"] = "Stop",
+        ["播放参数"] = "Playback parameters", ["目标窗口"] = "Target window", ["刷新窗口"] = "Refresh windows", ["输入方式"] = "Input mode", ["乐器"] = "Instrument", ["乐器 / 档案"] = "Instrument / Profile", ["和弦处理"] = "Chord handling", ["冲突处理"] = "Collision handling", ["速度"] = "Speed", ["转调"] = "Transpose", ["最大复音"] = "Max polyphony", ["链路补偿"] = "Link compensation", ["优先映射最近白键"] = "Prefer nearest white key", ["载入时自动移调"] = "Auto transpose on load", ["上一首"] = "Previous", ["下一首"] = "Next", ["移出队列"] = "Remove from queue", ["清空队列"] = "Clear queue", ["上移"] = "Move up", ["下移"] = "Move down", ["停止"] = "Stop",
         ["音域下限"] = "Range low", ["音域上限"] = "Range high", ["适配率"] = "Fit ratio",
-        ["音频转谱"] = "Audio to MIDI", ["调用本机 PianoTrans 将音频转换为 MIDI"] = "Convert audio to MIDI with local PianoTrans", ["选择目录"] = "Choose folder", ["输入音频"] = "Input audio", ["浏览"] = "Browse", ["输出 MIDI"] = "Output MIDI", ["开始转换"] = "Convert", ["取消转换"] = "Cancel conversion",
+        ["播放队列"] = "Play queue", ["自动连播"] = "Auto play next", ["收起"] = "Collapse", ["队列是空的"] = "Queue is empty", ["从曲库、在线曲库添加，或直接打开 MIDI"] = "Add tracks from a library or open a MIDI",
+        ["播放模式"] = "Play mode", ["收藏"] = "Favorite", ["下载到本地"] = "Download", ["只看收藏"] = "Favorites only",
+        ["音频转谱"] = "Audio to MIDI", ["选择目录"] = "Choose folder", ["输入音频"] = "Input audio", ["浏览"] = "Browse", ["输出 MIDI"] = "Output MIDI", ["开始转换"] = "Convert", ["取消转换"] = "Cancel conversion",
         ["定时任务"] = "Scheduler", ["使用本地时间或 NTP 偏移，在指定时刻启动当前 MIDI"] = "Start the current MIDI at a local time with optional NTP offset", ["校时状态"] = "Clock status", ["服务器与测量结果"] = "Server and measurement", ["测量 NTP"] = "Measure NTP", ["执行时间"] = "Execution time", ["日期"] = "Date", ["时间"] = "Time", ["MIDI 路径（留空使用当前曲目）"] = "MIDI path (blank uses current track)", ["使用最近一次 NTP 偏移"] = "Use latest NTP offset",
         ["曲库"] = "Library", ["扫描、搜索并管理本地 MIDI，原文件不会被自动删除"] = "Scan, search and manage local MIDI files; originals are never deleted", ["添加文件"] = "Add files", ["扫描目录"] = "Scan folder", ["搜索曲名或目录"] = "Search name or folder", ["加载"] = "Load", ["加入队列"] = "Add to queue", ["移出曲库"] = "Remove from library", ["上一页"] = "Previous page", ["下一页"] = "Next page",
         ["取消扫描"] = "Cancel scan", ["曲名"] = "Title", ["目录"] = "Folder", ["时长"] = "Duration", ["路径"] = "Path", ["载入"] = "Load",
@@ -172,7 +187,7 @@ public static class LocalizationService
         var direct = value switch
         {
             "\u5c1a\u672a\u8f7d\u5165 MIDI" => "No MIDI loaded",
-            "\u8bf7\u9009\u62e9\u6587\u4ef6\uff0c\u6216\u5c06 MIDI \u62d6\u5165\u7a97\u53e3" => "Choose a file or drop a MIDI into the window",
+            "\u5c1a\u672a\u9009\u62e9\u6587\u4ef6" => "No file selected",
             "\u51c6\u5907\u5c31\u7eea" => "Ready",
             _ => null,
         };

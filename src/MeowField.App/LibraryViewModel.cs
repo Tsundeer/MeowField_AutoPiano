@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -49,6 +50,22 @@ public partial class LibraryViewModel : ObservableObject
         catch (Exception exception)
         {
             StatusText = $"曲库加载失败：{exception.Message}";
+        }
+    }
+
+    public async Task AddTrackFileAsync(string path)
+    {
+        try
+        {
+            if (await _library.AddAsync(path, "在线下载") is not null)
+            {
+                StatusText = $"已加入曲库 {Path.GetFileNameWithoutExtension(path)}";
+                await RefreshAsync();
+            }
+        }
+        catch (Exception exception)
+        {
+            StatusText = $"加入曲库失败：{exception.Message}";
         }
     }
 

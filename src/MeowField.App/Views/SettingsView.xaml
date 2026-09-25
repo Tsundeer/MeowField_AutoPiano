@@ -7,7 +7,6 @@
             <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="16" /><RowDefinition Height="Auto" /><RowDefinition Height="16" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
             <StackPanel>
                 <TextBlock Style="{StaticResource HeadingText}" Text="设置" />
-                <TextBlock Margin="0,5,0,0" Style="{StaticResource SecondaryText}" Text="管理 MeowField_AutoPiano 的外观、语言、更新与运行安全" />
             </StackPanel>
 
             <Grid Grid.Row="2">
@@ -15,19 +14,16 @@
                 <Border Background="{DynamicResource Brush.Surface.Panel}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1" CornerRadius="6" Padding="20">
                     <StackPanel>
                         <TextBlock FontWeight="SemiBold" Text="外观与语言" />
-                        <TextBlock Margin="0,6,0,0" Style="{StaticResource SecondaryText}" Text="界面偏好会自动保存到本机用户目录。" />
-                        <StackPanel Margin="0,18,0,0" Orientation="Horizontal">
+                        <StackPanel Margin="0,16,0,0" Orientation="Horizontal">
                             <Button Command="{Binding ToggleThemeCommand}"><StackPanel Orientation="Horizontal"><iconPacks:PackIconLucide Kind="Moon" Width="15" Height="15" /><TextBlock Margin="7,0,0,0" Text="切换主题" /></StackPanel></Button>
                             <Button Margin="8,0,0,0" Command="{Binding ToggleLanguageCommand}"><StackPanel Orientation="Horizontal"><iconPacks:PackIconLucide Kind="Languages" Width="15" Height="15" /><TextBlock Margin="7,0,0,0" Text="切换语言" /></StackPanel></Button>
                         </StackPanel>
-                        <TextBlock Margin="0,14,0,0" Style="{StaticResource SecondaryText}" Text="当前主题与语言由右上角状态按钮显示。" />
                     </StackPanel>
                 </Border>
                 <Border Grid.Column="2" Background="{DynamicResource Brush.Surface.Panel}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1" CornerRadius="6" Padding="20">
                     <StackPanel>
                         <TextBlock FontWeight="SemiBold" Text="播放安全" />
                         <TextBlock Margin="0,6,0,0" Style="{StaticResource SecondaryText}" Text="SendInput 只会向当前前台目标进程发送按键，失焦时自动停止并提示。" TextWrapping="Wrap" />
-                        <TextBlock Margin="0,18,0,0" Text="建议：绑定目标窗口后使用全局快捷键开始播放。" TextWrapping="Wrap" />
                         <TextBlock Margin="0,8,0,0" Style="{StaticResource SecondaryText}" Text="窗口消息模式适用于支持后台消息的游戏。" TextWrapping="Wrap" />
                     </StackPanel>
                 </Border>
@@ -38,8 +34,7 @@
                 <Border Background="{DynamicResource Brush.Surface.Panel}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1" CornerRadius="6" Padding="20">
                     <StackPanel>
                         <TextBlock FontWeight="SemiBold" Text="软件更新" />
-                        <TextBlock Margin="0,6,0,0" Style="{StaticResource SecondaryText}" Text="从 GitHub 获取 MeowField_AutoPiano 的最新发行版本。" TextWrapping="Wrap" />
-                        <StackPanel Margin="0,18,0,0" Orientation="Horizontal">
+                        <StackPanel Margin="0,14,0,0" Orientation="Horizontal">
                             <Button Style="{StaticResource PrimaryButton}" Command="{Binding CheckForUpdatesCommand}" IsEnabled="{Binding IsUpdateDownloading, Converter={StaticResource InverseBooleanConverter}}"><StackPanel Orientation="Horizontal"><iconPacks:PackIconLucide Kind="RefreshCw" Width="15" Height="15" /><TextBlock Margin="7,0,0,0" Text="检查更新" /></StackPanel></Button>
                             <Button Margin="8,0,0,0" Command="{Binding OpenReleasePageCommand}"><StackPanel Orientation="Horizontal"><iconPacks:PackIconLucide Kind="ExternalLink" Width="15" Height="15" /><TextBlock Margin="7,0,0,0" Text="打开发布页" /></StackPanel></Button>
                         </StackPanel>

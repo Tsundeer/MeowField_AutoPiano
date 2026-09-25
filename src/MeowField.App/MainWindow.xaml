@@ -18,7 +18,7 @@
     <shell:WindowChrome.WindowChrome>
         <shell:WindowChrome CaptionHeight="0" ResizeBorderThickness="6" GlassFrameThickness="0" UseAeroCaptionButtons="False" />
     </shell:WindowChrome.WindowChrome>
-    <Grid Background="{DynamicResource Brush.Surface.App}">
+    <Grid x:Name="RootGrid" Background="{DynamicResource Brush.Surface.App}">
         <Grid.RowDefinitions>
             <RowDefinition Height="52" />
             <RowDefinition Height="*" />
@@ -288,38 +288,6 @@
                             </ComboBox.ItemTemplate>
                         </ComboBox>
                         <CheckBox Margin="0,10,0,0" IsChecked="{Binding AutoTranspose}" Content="载入时自动移调" />
-                        <Separator Margin="0,20,0,16" />
-                        <Grid>
-                            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                            <TextBlock FontWeight="SemiBold" Text="播放队列" />
-                            <CheckBox Grid.Column="1" IsChecked="{Binding AutoPlayNext}" Content="自动下一首" />
-                        </Grid>
-                        <ListBox Margin="0,10,0,0" Height="150" Padding="4" ItemsSource="{Binding Queue}" SelectedItem="{Binding SelectedQueueItem}">
-                            <ListBox.ItemTemplate>
-                                <DataTemplate>
-                                    <Grid Margin="2,2">
-                                        <Grid.ColumnDefinitions><ColumnDefinition Width="24" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-                                        <iconPacks:PackIconLucide Kind="Music2" Width="14" Height="14" Foreground="{DynamicResource Brush.Accent.Primary}" />
-                                        <TextBlock Grid.Column="1" Text="{Binding Name}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Path}" />
-                                    </Grid>
-                                </DataTemplate>
-                            </ListBox.ItemTemplate>
-                        </ListBox>
-                        <Grid Margin="0,8,0,0">
-                            <Grid.Resources>
-                                <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-                                    <Setter Property="Width" Value="40" />
-                                    <Setter Property="Padding" Value="4" />
-                                </Style>
-                            </Grid.Resources>
-                            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-                            <Button Command="{Binding PlayPreviousCommand}" IsEnabled="{Binding CanPlayPrevious}" ToolTip="上一首"><iconPacks:PackIconLucide Kind="SkipBack" Width="15" Height="15" /></Button>
-                            <Button Grid.Column="1" Margin="6,0,0,0" Command="{Binding PlayNextCommand}" IsEnabled="{Binding CanPlayNext}" ToolTip="下一首"><iconPacks:PackIconLucide Kind="SkipForward" Width="15" Height="15" /></Button>
-                            <Button Grid.Column="2" Margin="6,0,0,0" Command="{Binding RemoveSelectedQueueCommand}" ToolTip="移出队列"><iconPacks:PackIconLucide Kind="ListMinus" Width="15" Height="15" /></Button>
-                            <Button Grid.Column="3" Margin="6,0,0,0" Command="{Binding ClearQueueCommand}" ToolTip="清空队列"><iconPacks:PackIconLucide Kind="Trash2" Width="15" Height="15" /></Button>
-                            <Button Grid.Column="4" Margin="6,0,0,0" Command="{Binding MoveQueueUpCommand}" IsEnabled="{Binding CanMoveQueueUp}" ToolTip="上移"><iconPacks:PackIconLucide Kind="ChevronUp" Width="15" Height="15" /></Button>
-                            <Button Grid.Column="5" Margin="6,0,0,0" Command="{Binding MoveQueueDownCommand}" IsEnabled="{Binding CanMoveQueueDown}" ToolTip="下移"><iconPacks:PackIconLucide Kind="ChevronDown" Width="15" Height="15" /></Button>
-                        </Grid>
                     </StackPanel>
                 </ScrollViewer>
             </Border>
@@ -342,14 +310,20 @@
 
         <Border Grid.Row="2" Grid.Column="1" Background="{DynamicResource Brush.Surface.Panel}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="0,1,0,0">
             <Grid Margin="22,0">
-                <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                 <TextBlock TextTrimming="CharacterEllipsis"><TextBlock.Text><MultiBinding Converter="{StaticResource UiTextConverter}"><Binding Path="StatusText" /><Binding Path="IsEnglish" /></MultiBinding></TextBlock.Text></TextBlock>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                     <Button Style="{StaticResource IconButton}" Command="{Binding StopCommand}" ToolTip="停止">
                         <iconPacks:PackIconLucide Kind="Square" Width="15" Height="15" />
                     </Button>
-                    <Button Margin="8,0,0,0" Width="92" Style="{StaticResource PrimaryButton}" Command="{Binding PlayPauseCommand}">
+                    <Button Margin="4,0,0,0" Style="{StaticResource IconButton}" Command="{Binding PlayPreviousCommand}" IsEnabled="{Binding CanPlayPrevious}" ToolTip="上一首">
+                        <iconPacks:PackIconLucide Kind="SkipBack" Width="15" Height="15" />
+                    </Button>
+                    <Button Margin="8,0" Width="92" Style="{StaticResource PrimaryButton}" Command="{Binding PlayPauseCommand}">
                         <StackPanel Orientation="Horizontal"><iconPacks:PackIconLucide Kind="Play" Width="16" Height="16" /><TextBlock Margin="7,0,0,0" Text="{Binding PlayPauseLabel}" /></StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource IconButton}" Command="{Binding PlayNextCommand}" IsEnabled="{Binding CanPlayNext}" ToolTip="下一首">
+                        <iconPacks:PackIconLucide Kind="SkipForward" Width="15" Height="15" />
                     </Button>
                 </StackPanel>
                 <Grid Grid.Column="2" Margin="22,0">
@@ -362,7 +336,36 @@
                 <TextBlock Grid.Column="3" FontFamily="Consolas">
                     <Run Text="{Binding ElapsedText}" /><Run Text="  /  " Foreground="{DynamicResource Brush.Text.Secondary}" /><Run Text="{Binding DurationText}" Foreground="{DynamicResource Brush.Text.Secondary}" />
                 </TextBlock>
+                <Grid Grid.Column="4" Margin="14,0,0,0" VerticalAlignment="Center">
+                    <Button Command="{Binding ToggleQueueCommand}" ToolTip="播放队列">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource IconButton}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsQueueOpen}" Value="True">
+                                        <Setter Property="Foreground" Value="{DynamicResource Brush.Accent.Primary}" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                        <iconPacks:PackIconLucide Kind="ListMusic" Width="16" Height="16" />
+                    </Button>
+                    <Border IsHitTestVisible="False" Margin="24,2,0,0" HorizontalAlignment="Left" VerticalAlignment="Top" CornerRadius="6" Background="{DynamicResource Brush.Accent.Primary}" Padding="4,1">
+                        <TextBlock FontSize="9" FontWeight="SemiBold" Foreground="White" Text="{Binding QueueCount}">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding QueueCount}" Value="0">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </Border>
+                </Grid>
             </Grid>
         </Border>
+
     </Grid>
 </Window>

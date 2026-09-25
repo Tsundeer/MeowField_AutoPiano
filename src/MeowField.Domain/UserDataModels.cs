@@ -15,6 +15,16 @@ public sealed record UserSettings
     public IReadOnlyDictionary<int, string>? DrumKeyMap { get; init; }
     public IReadOnlyDictionary<int, string>? MicrophoneKeyMap { get; init; }
     public bool AutoPlayNext { get; init; } = true;
+    // 旧版设置没有该字段，读取时回退到 AutoPlayNext 推导。
+    public string? PlaybackMode { get; init; }
+}
+
+public enum PlaybackMode
+{
+    Sequential,
+    LoopAll,
+    RepeatOne,
+    Shuffle,
 }
 
 public sealed record Preset(

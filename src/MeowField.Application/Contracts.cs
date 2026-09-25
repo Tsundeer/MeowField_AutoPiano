@@ -67,6 +67,8 @@ public interface IUserDataStore
     Task SavePresetsAsync(IReadOnlyList<Preset> presets, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<PlaylistItem>> LoadPlaylistAsync(CancellationToken cancellationToken = default);
     Task SavePlaylistAsync(IReadOnlyList<PlaylistItem> playlist, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<string>> LoadFavoriteTracksAsync(CancellationToken cancellationToken = default);
+    Task SaveFavoriteTracksAsync(IReadOnlyList<string> trackIds, CancellationToken cancellationToken = default);
 }
 
 public interface IGameProfileProvider

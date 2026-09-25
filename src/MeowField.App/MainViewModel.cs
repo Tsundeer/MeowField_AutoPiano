@@ -4,7 +4,9 @@ using System.ComponentModel;
 using System.IO;
 using System.Diagnostics;
 using System.Net.Http;
-using System.Text.RegularExpressions;
+using System.Net.Http.Headers;
+using System.Security.Cryptography;
+using System.Text.Json;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -67,6 +69,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         Library.LoadRequested += (_, path) => _ = LoadMidiAsync(path);
         Library.QueueRequested += (_, entry) => AddToQueue(entry);
         OnlineLibrary.MidiLoaded += (_, payload) => _ = LoadOnlineMidiAsync(payload);
+        OnlineLibrary.DownloadSaved += (_, path) => _ = Library.AddTrackFileAsync(path);
         Converter.MidiReady += (_, path) => _ = LoadMidiAsync(path);
         Profiles.ConfigSelected += (_, config) =>
         {
@@ -93,6 +96,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
         selectedInstrumentChoice = InstrumentChoices.FirstOrDefault(choice => choice.IsGeneric && choice.Kind == InstrumentKind.Piano);
         Profiles.GameProfiles.CollectionChanged += OnGameProfilesCollectionChanged;
+        Queue.CollectionChanged += (_, _) => OnPropertyChanged(nameof(QueueCount));
         Profiles.PropertyChanged += OnProfilesPropertyChanged;
         RebuildKeyboardPreview(CreateConfig());
         Schedule.MidiPathProvider = () => _midi?.SourcePath;
@@ -118,6 +122,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     public IReadOnlyList<ChordMode> ChordModes { get; } = Enum.GetValues<ChordMode>();
     public IReadOnlyList<CollisionStrategy> CollisionStrategies { get; } = Enum.GetValues<CollisionStrategy>();
     public IReadOnlyList<NearestWhiteDirection> NearestWhiteDirections { get; } = Enum.GetValues<NearestWhiteDirection>();
+    public IReadOnlyList<PlaybackMode> PlaybackModes { get; } = Enum.GetValues<PlaybackMode>();
     public ObservableCollection<KeyboardKeyState> KeyboardKeys { get; } = [];
     [ObservableProperty] private string keyboardCountText = "21 键";
     [ObservableProperty] private int keyboardColumns = 7;
@@ -126,7 +131,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     [ObservableProperty] private WindowTarget? selectedWindow;
     [ObservableProperty] private string? targetProcessName;
     [ObservableProperty] private string fileName = "尚未载入 MIDI";
-    [ObservableProperty] private string filePath = "请选择文件，或将 MIDI 拖入窗口";
+    [ObservableProperty] private string filePath = "尚未选择文件";
     [ObservableProperty] private string statusText = "准备就绪";
     [ObservableProperty] private string elapsedText = "00:00.000";
     [ObservableProperty] private string durationText = "00:00.000";
@@ -143,7 +148,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     [ObservableProperty] private int linkLatencyMs;
     [ObservableProperty] private bool preferNearestWhite = true;
     [ObservableProperty] private NearestWhiteDirection nearestWhiteDirection = NearestWhiteDirection.Down;
-    [ObservableProperty] private bool autoTranspose;
+    [ObservableProperty] private bool autoTranspose = true;
     [ObservableProperty] private InputMode inputMode = InputMode.WindowMessage;
     [ObservableProperty] private InstrumentKind instrument = InstrumentKind.Piano;
     [ObservableProperty] private ChordMode chordMode = ChordMode.Prefer;
@@ -158,10 +163,11 @@ public partial class MainViewModel : ObservableObject, IDisposable
     [ObservableProperty] private IReadOnlyDictionary<int, string>? customKeyMap;
     [ObservableProperty] private IReadOnlyList<MidiNote> timelineNotes = [];
     [ObservableProperty] private string activePage = "playback";
-    [ObservableProperty] private bool autoPlayNext = true;
+    [ObservableProperty] private PlaybackMode playbackMode = PlaybackMode.Sequential;
     [ObservableProperty] private bool isEnglish;
     [ObservableProperty] private bool isDarkTheme;
     [ObservableProperty] private PlaylistItem? selectedQueueItem;
+    [ObservableProperty] private bool isQueueOpen;
     [ObservableProperty] private string updateStatus = "尚未检查更新";
     [ObservableProperty] private string latestVersion = "";
     [ObservableProperty] private string releaseUrl = "https://github.com/Tsundeer/MeowField_AutoPiano/releases";
@@ -193,10 +199,16 @@ public partial class MainViewModel : ObservableObject, IDisposable
     public string CurrentVersion => typeof(MainViewModel).Assembly.GetName().Version?.ToString(3) ?? "2.0.0";
     public string VersionText => $"版本 {CurrentVersion}";
     public string VersionBadge => $"v{CurrentVersion}";
-    public bool CanPlayPrevious => SelectedQueueItem is not null && Queue.IndexOf(SelectedQueueItem) > 0;
-    public bool CanPlayNext => SelectedQueueItem is null ? Queue.Count > 0 : Queue.IndexOf(SelectedQueueItem) < Queue.Count - 1;
+    public bool CanPlayPrevious => IsQueueRoundRobin
+        ? Queue.Count > 0
+        : SelectedQueueItem is not null && Queue.IndexOf(SelectedQueueItem) > 0;
+    public bool CanPlayNext => IsQueueRoundRobin
+        ? Queue.Count > 0
+        : SelectedQueueItem is null ? Queue.Count > 0 : Queue.IndexOf(SelectedQueueItem) < Queue.Count - 1;
+    public bool IsQueueRoundRobin => PlaybackMode is PlaybackMode.LoopAll or PlaybackMode.RepeatOne or PlaybackMode.Shuffle;
     public bool CanMoveQueueUp => SelectedQueueItem is not null && Queue.IndexOf(SelectedQueueItem) > 0;
     public bool CanMoveQueueDown => SelectedQueueItem is not null && Queue.IndexOf(SelectedQueueItem) >= 0 && Queue.IndexOf(SelectedQueueItem) < Queue.Count - 1;
+    public int QueueCount => Queue.Count;
     public bool CanEditPlaybackSettings => PlaybackState is not (PlaybackState.Playing or PlaybackState.Paused);
 
     [RelayCommand]
@@ -231,11 +243,11 @@ public partial class MainViewModel : ObservableObject, IDisposable
             _midi = midi;
             TimelineNotes = midi.Notes;
             _completionHandled = false;
-            if (addToQueue) EnsureQueueItem(path, Path.GetFileNameWithoutExtension(path));
+            if (addToQueue) EnsureQueueItem(path, displayName ?? Path.GetFileNameWithoutExtension(path));
             RaiseQueueState();
             _playback.Load(midi, config);
             FileName = displayName ?? Path.GetFileNameWithoutExtension(path);
-            FilePath = displayName is null ? Path.GetFullPath(path) : "在线曲库";
+            FilePath = IsOnlineCachePath(path) ? "在线曲库" : Path.GetFullPath(path);
             NoteCount = midi.Notes.Count;
             EventCount = PlaybackEventBuilder.Build(midi.Notes, config).Count;
             UpdateFitRatios();
@@ -258,16 +270,34 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     private async Task LoadOnlineMidiAsync(OnlineMidiPayload payload)
     {
-        var temporaryPath = Path.Combine(Path.GetTempPath(), $"MeowField-{Guid.NewGuid():N}.mid");
+        // 写入全局缓存目录而不是临时文件，让在线曲目可以进入全局播放队列并跨会话保留。
+        var cachePath = OnlineCachePath(payload.CacheKey);
+        Directory.CreateDirectory(Path.GetDirectoryName(cachePath)!);
+        await File.WriteAllBytesAsync(cachePath, payload.Content);
+        await LoadMidiAsync(cachePath, addToQueue: true, displayName: payload.Name);
+    }
+
+    private string OnlineCachePath(string key)
+    {
+        var safeKey = new string(key.Where(char.IsLetterOrDigit).ToArray());
+        if (safeKey.Length == 0)
+        {
+            safeKey = Convert.ToHexString(SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(key)))[..16].ToLowerInvariant();
+        }
+
+        return Path.Combine(_store.DataDirectory, "online-cache", $"{safeKey}.mid");
+    }
+
+    private bool IsOnlineCachePath(string path)
+    {
         try
         {
-            await File.WriteAllBytesAsync(temporaryPath, payload.Content);
-            await LoadMidiAsync(temporaryPath, addToQueue: false, displayName: payload.Name);
+            var cacheRoot = Path.GetFullPath(Path.Combine(_store.DataDirectory, "online-cache"));
+            return Path.GetFullPath(path).StartsWith(cacheRoot, StringComparison.OrdinalIgnoreCase);
         }
-        finally
+        catch
         {
-            try { if (File.Exists(temporaryPath)) File.Delete(temporaryPath); }
-            catch (IOException) { /* The OS will clean a locked temporary file. */ }
+            return false;
         }
     }
 
@@ -312,14 +342,14 @@ public partial class MainViewModel : ObservableObject, IDisposable
         {
             if (!_windowCatalog.TryActivate(SelectedWindow.Handle))
             {
-                StatusText = "无法激活目标窗口。请关闭遮挡窗口，并确认程序权限一致。";
+                StatusText = "无法激活目标窗口";
                 return;
             }
 
             await Task.Delay(120);
             if (!_windowCatalog.IsForeground(SelectedWindow.Handle))
             {
-                StatusText = "目标窗口未进入前台。请点击目标游戏窗口后，使用全局播放快捷键。";
+                StatusText = "目标窗口不在前台";
                 return;
             }
         }
@@ -346,32 +376,43 @@ public partial class MainViewModel : ObservableObject, IDisposable
     }
 
     [RelayCommand]
+    private void ToggleQueue() => IsQueueOpen = !IsQueueOpen;
+
+    [RelayCommand]
     private async Task CheckForUpdatesAsync()
     {
         UpdateStatus = IsEnglish ? "Checking for updates..." : "正在检查更新...";
         string? installerPath = null;
         try
         {
-            string? tag = null;
             using var client = new HttpClient { Timeout = TimeSpan.FromMinutes(5) };
             client.DefaultRequestHeaders.UserAgent.ParseAdd($"MeowField-AutoPiano/{CurrentVersion}");
-            // 不走 GitHub API（未认证会被 403 限流），改用 releases/latest 的 302 重定向获取最新版本。
-            using (var response = await client.GetAsync(
-                       "https://github.com/Tsundeer/MeowField_AutoPiano/releases/latest",
-                       HttpCompletionOption.ResponseHeadersRead))
-            {
-                response.EnsureSuccessStatusCode();
-                var latestUri = response.RequestMessage?.RequestUri;
-                if (latestUri is null ||
-                    !latestUri.AbsolutePath.Contains("/releases/tag/", StringComparison.OrdinalIgnoreCase))
-                {
-                    UpdateStatus = IsEnglish ? "Unable to read the latest release." : "无法获取最新版本信息。";
-                    return;
-                }
+            client.DefaultRequestHeaders.Accept.Add(
+                new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
 
-                tag = Uri.UnescapeDataString(Path.GetFileName(latestUri.AbsolutePath.TrimEnd('/')));
+            // 走 GitHub Releases API 获取最新版本与资源列表（API 要求带 User-Agent，已设置）。
+            using var apiRequest = new HttpRequestMessage(
+                HttpMethod.Get,
+                "https://api.github.com/repos/Tsundeer/MeowField_AutoPiano/releases/latest");
+            using var apiResponse = await client.SendAsync(apiRequest);
+            if (!apiResponse.IsSuccessStatusCode)
+            {
+                UpdateStatus = IsEnglish
+                    ? $"Unable to reach the update server ({(int)apiResponse.StatusCode})."
+                    : $"无法连接更新服务器（{(int)apiResponse.StatusCode}）。";
+                return;
             }
 
+            using var doc = await JsonDocument.ParseAsync(await apiResponse.Content.ReadAsStreamAsync());
+            var root = doc.RootElement;
+            if (!root.TryGetProperty("tag_name", out var tagElement) ||
+                tagElement.ValueKind != JsonValueKind.String)
+            {
+                UpdateStatus = IsEnglish ? "Unable to read the latest release." : "无法获取最新版本信息。";
+                return;
+            }
+
+            var tag = tagElement.GetString()!;
             var comparison = CompareVersions(tag, CurrentVersion);
             if (comparison <= 0)
             {
@@ -380,16 +421,28 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 return;
             }
 
-            var assetName = await FindSetupAssetAsync(client, tag);
-            if (string.IsNullOrWhiteSpace(assetName))
+            // 从 assets 里挑出 Windows x64 安装包。
+            string? assetName = null;
+            if (root.TryGetProperty("assets", out var assetsElement) &&
+                assetsElement.ValueKind == JsonValueKind.Array)
             {
-                UpdateStatus = IsEnglish ? "The latest setup installer was not found." : "最新版本没有找到安装包。";
-                return;
+                foreach (var asset in assetsElement.EnumerateArray())
+                {
+                    if (asset.TryGetProperty("name", out var nameElement) &&
+                        nameElement.ValueKind == JsonValueKind.String &&
+                        nameElement.GetString() is { } candidate &&
+                        candidate.EndsWith("Setup.exe", StringComparison.OrdinalIgnoreCase))
+                    {
+                        assetName = candidate;
+                        break;
+                    }
+                }
             }
+            assetName ??= $"MeowField_AutoPiano-{NormalizeVersion(tag)}-win-x64-Setup.exe";
 
             var assetUrl = $"https://github.com/Tsundeer/MeowField_AutoPiano/releases/download/" +
                            $"{Uri.EscapeDataString(tag)}/{Uri.EscapeDataString(assetName)}";
-            LatestVersion = tag ?? string.Empty;
+            LatestVersion = tag;
             UpdateStatus = IsEnglish ? $"Downloading {tag}..." : $"正在下载 {tag} 安装包...";
             var updateDirectory = Path.Combine(Path.GetTempPath(), "MeowField_AutoPiano", "updates");
             Directory.CreateDirectory(updateDirectory);
@@ -465,33 +518,6 @@ public partial class MainViewModel : ObservableObject, IDisposable
         {
             IsUpdateDownloading = false;
         }
-    }
-
-    private static async Task<string?> FindSetupAssetAsync(HttpClient client, string tag)
-    {
-        const string repository = "Tsundeer/MeowField_AutoPiano";
-        var fallback = $"MeowField_AutoPiano-{NormalizeVersion(tag)}-win-x64-Setup.exe";
-        var assetPage = $"https://github.com/{repository}/releases/expanded_assets/{Uri.EscapeDataString(tag)}";
-        using var response = await client.GetAsync(assetPage);
-        if (!response.IsSuccessStatusCode)
-        {
-            return fallback;
-        }
-
-        var html = await response.Content.ReadAsStringAsync();
-        var pattern = $"href=\"/{repository}/releases/download/{Regex.Escape(tag)}/(?<asset>[^\"/?#]+)\"";
-        for (var match = Regex.Match(html, pattern, RegexOptions.IgnoreCase);
-             match.Success;
-             match = match.NextMatch())
-        {
-            var name = Uri.UnescapeDataString(match.Groups["asset"].Value);
-            if (name.EndsWith("Setup.exe", StringComparison.OrdinalIgnoreCase))
-            {
-                return name;
-            }
-        }
-
-        return fallback;
     }
 
     private static string FormatUpdateProgress(long downloaded, long total)
@@ -640,7 +666,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         if (_midi is null)
         {
             FileName = value ? "No MIDI loaded" : "尚未载入 MIDI";
-            FilePath = value ? "Choose a file or drop a MIDI into the window" : "请选择文件，或将 MIDI 拖入窗口";
+            FilePath = value ? "No file selected" : "尚未选择文件";
             StatusText = value ? "Ready" : "准备就绪";
         }
         if (System.Windows.Application.Current?.MainWindow is { } window)
@@ -674,7 +700,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     partial void OnInputModeChanged(InputMode value) { InvalidateProfileSelection(); ScheduleSettingsSave(); SchedulePlaybackConfigRefresh(); }
     partial void OnChordModeChanged(ChordMode value) { InvalidateProfileSelection(); ScheduleSettingsSave(); SchedulePlaybackConfigRefresh(); }
     partial void OnCollisionStrategyChanged(CollisionStrategy value) { InvalidateProfileSelection(); ScheduleSettingsSave(); SchedulePlaybackConfigRefresh(); }
-    partial void OnAutoPlayNextChanged(bool value) => ScheduleSettingsSave();
+    partial void OnPlaybackModeChanged(PlaybackMode value) { RaiseQueueState(); ScheduleSettingsSave(); }
     partial void OnCustomKeyMapChanged(IReadOnlyDictionary<int, string>? value) { ScheduleSettingsSave(); SchedulePlaybackConfigRefresh(); }
     partial void OnTargetProcessNameChanged(string? value) => ScheduleSettingsSave();
     partial void OnNoteRangeLowChanged(int value)
@@ -961,10 +987,24 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 PlaybackState.Faulted => $"播放失败：{DescribePlaybackError(snapshot.Error)}",
                 _ => StatusText,
             };
-            if (snapshot.State == PlaybackState.Stopped && snapshot.DurationMs > 0 && snapshot.CursorMs == snapshot.DurationMs && AutoPlayNext && !_completionHandled)
+            if (snapshot.State == PlaybackState.Stopped && snapshot.DurationMs > 0 && snapshot.CursorMs == snapshot.DurationMs && !_completionHandled)
             {
                 _completionHandled = true;
-                _ = PlayQueueOffsetAsync(1);
+                var index = SelectedQueueItem is null ? -1 : Queue.IndexOf(SelectedQueueItem);
+                switch (PlaybackMode)
+                {
+                    case PlaybackMode.RepeatOne:
+                        // 播放结束停在 Stopped 态，PlayPause 会重载并重新播放当前曲目。
+                        _ = PlayPause();
+                        break;
+                    case PlaybackMode.LoopAll:
+                    case PlaybackMode.Shuffle:
+                        _ = PlayQueueOffsetAsync(1);
+                        break;
+                    default:
+                        if (index >= 0 && index < Queue.Count - 1) _ = PlayQueueOffsetAsync(1);
+                        break;
+                }
             }
             OnPropertyChanged(nameof(PlayPauseLabel));
         });

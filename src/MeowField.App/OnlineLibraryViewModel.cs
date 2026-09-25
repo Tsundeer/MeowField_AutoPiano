@@ -7,6 +7,8 @@ using System.Windows.Data;
 using System.ComponentModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using MeowField.Application;
+using Microsoft.Win32;
 
 namespace MeowField.App;
 
@@ -15,25 +17,33 @@ public partial class OnlineLibraryViewModel : ObservableObject
     private const string CatalogUrl = "https://raw.githubusercontent.com/Tsundeer/MeowField_MidiLibrary/main/catalog.json";
     private const string DownloadBaseUrl = "https://raw.githubusercontent.com/Tsundeer/MeowField_MidiLibrary/main/";
     private const string AllCategoryKey = "*";
+    private readonly IUserDataStore _store;
     private readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(30) };
     private readonly List<OnlineMidiTrack> _catalog = [];
     private readonly SemaphoreSlim _refreshGate = new(1, 1);
+    private readonly HashSet<string> _favoriteIds = new(StringComparer.Ordinal);
     private List<OnlineMidiTrack> _filtered = [];
+    private bool _favoritesLoaded;
+
+    public OnlineLibraryViewModel(IUserDataStore store) => _store = store;
 
     public ObservableCollection<CategoryOption> Categories { get; } = [new(AllCategoryKey, "全部分类")];
     public IReadOnlyList<string> SizeOptions { get; } = ["全部大小", "小于 1 MB", "1–5 MB", "5–10 MB", "大于 10 MB"];
     public IReadOnlyList<string> SortOptions { get; } = ["默认顺序", "名称 A→Z", "名称 Z→A", "大小 小→大", "大小 大→小"];
     public ICollectionView TracksView { get; private set; } = new ListCollectionView(new List<OnlineMidiTrack>());
     public event EventHandler<OnlineMidiPayload>? MidiLoaded;
+    public event EventHandler<string>? DownloadSaved;
 
     [ObservableProperty] private string query = "";
-    [ObservableProperty] private string selectedCategoryKey = AllCategoryKey;
+    // ItemsSource 清空重建时 ComboBox 会把 SelectedValue 写回 null，因此允许瞬态 null。
+    [ObservableProperty] private string? selectedCategoryKey = AllCategoryKey;
     [ObservableProperty] private string sizeFilter = "全部大小";
     [ObservableProperty] private string sortMode = "默认顺序";
     [ObservableProperty] private OnlineMidiTrack? selectedTrack;
     [ObservableProperty] private bool isBusy;
-    [ObservableProperty] private string statusText = "加载在线曲库以浏览可下载 MIDI";
+    [ObservableProperty] private string statusText = "尚未加载";
     [ObservableProperty] private int total;
+    [ObservableProperty] private bool onlyFavorites;
 
     public async Task EnsureLoadedAsync()
     {
@@ -42,6 +52,12 @@ public partial class OnlineLibraryViewModel : ObservableObject
         try
         {
             if (_catalog.Count > 0) return;
+            if (!_favoritesLoaded)
+            {
+                _favoriteIds.UnionWith(await _store.LoadFavoriteTracksAsync());
+                _favoritesLoaded = true;
+            }
+
             await RefreshCoreAsync();
         }
         finally
@@ -56,6 +72,12 @@ public partial class OnlineLibraryViewModel : ObservableObject
         await _refreshGate.WaitAsync();
         try
         {
+            if (!_favoritesLoaded)
+            {
+                _favoriteIds.UnionWith(await _store.LoadFavoriteTracksAsync());
+                _favoritesLoaded = true;
+            }
+
             await RefreshCoreAsync();
         }
         finally
@@ -69,7 +91,7 @@ public partial class OnlineLibraryViewModel : ObservableObject
         try
         {
             IsBusy = true;
-            StatusText = "正在获取在线曲库索引...";
+            StatusText = "加载中...";
             using var response = await _httpClient.GetAsync(CatalogUrl);
             response.EnsureSuccessStatusCode();
             await using var stream = await response.Content.ReadAsStreamAsync();
@@ -78,11 +100,11 @@ public partial class OnlineLibraryViewModel : ObservableObject
             _catalog.AddRange(document?.Tracks ?? []);
             RebuildCategories();
             ApplyFilter();
-            StatusText = $"在线曲库已加载：{_catalog.Count:N0} 首";
+            StatusText = $"已加载 {_catalog.Count:N0} 首";
         }
         catch (Exception exception)
         {
-            StatusText = $"在线曲库加载失败：{exception.Message}";
+            StatusText = $"加载失败：{exception.Message}";
         }
         finally
         {
@@ -105,20 +127,39 @@ public partial class OnlineLibraryViewModel : ObservableObject
     private async Task LoadSelectedAsync()
     {
         if (SelectedTrack is null || IsBusy) return;
+        await DownloadAndUseAsync(SelectedTrack, saveTo: null);
+    }
+
+    [RelayCommand]
+    private async Task DownloadTrackAsync(OnlineMidiTrack? track)
+    {
+        if (track is null || IsBusy) return;
+        var dialog = new SaveFileDialog
+        {
+            FileName = $"{SanitizeFileName(track.Name)}.mid",
+            Filter = "MIDI 文件 (*.mid)|*.mid|所有文件 (*.*)|*.*",
+        };
+        if (dialog.ShowDialog() != true) return;
+        await DownloadAndUseAsync(track, dialog.FileName);
+    }
+
+    private async Task DownloadAndUseAsync(OnlineMidiTrack track, string? saveTo)
+    {
         try
         {
             IsBusy = true;
-            StatusText = $"正在加载：{SelectedTrack.Name}";
-            var relativePath = SelectedTrack.Path.Replace('\\', '/');
-            var bytes = await _httpClient.GetByteArrayAsync(DownloadBaseUrl + Uri.EscapeDataString(relativePath).Replace("%2F", "/"));
-            var hash = Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
-            if (!hash.Equals(SelectedTrack.Sha256, StringComparison.OrdinalIgnoreCase))
+            StatusText = $"下载中 {track.Name}";
+            var bytes = await DownloadTrackBytesAsync(track);
+            if (saveTo is null)
             {
-                throw new InvalidDataException("下载文件校验失败，请稍后重试。");
+                MidiLoaded?.Invoke(this, new OnlineMidiPayload(track.Name, bytes, track.Id));
+                StatusText = $"已载入 {track.Name}";
+                return;
             }
 
-            MidiLoaded?.Invoke(this, new OnlineMidiPayload(SelectedTrack.Name, bytes));
-            StatusText = $"已加载播放：{SelectedTrack.Name}";
+            await File.WriteAllBytesAsync(saveTo, bytes);
+            StatusText = $"已下载 {track.Name}";
+            DownloadSaved?.Invoke(this, saveTo);
         }
         catch (Exception exception)
         {
@@ -129,6 +170,40 @@ public partial class OnlineLibraryViewModel : ObservableObject
             IsBusy = false;
         }
     }
+
+    private async Task<byte[]> DownloadTrackBytesAsync(OnlineMidiTrack track)
+    {
+        var relativePath = track.Path.Replace('\\', '/');
+        var bytes = await _httpClient.GetByteArrayAsync(DownloadBaseUrl + Uri.EscapeDataString(relativePath).Replace("%2F", "/"));
+        if (!string.IsNullOrEmpty(track.Sha256))
+        {
+            var hash = Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
+            if (!hash.Equals(track.Sha256, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidDataException("文件校验失败，请稍后重试。");
+            }
+        }
+
+        return bytes;
+    }
+
+    [RelayCommand]
+    private void ToggleFavorite(OnlineMidiTrack? track)
+    {
+        if (track is null) return;
+        track.IsFavorite = !track.IsFavorite;
+        var changed = track.IsFavorite ? _favoriteIds.Add(track.Id) : _favoriteIds.Remove(track.Id);
+        if (changed) _ = _store.SaveFavoriteTracksAsync(_favoriteIds.ToList());
+        if (OnlyFavorites && _catalog.Count > 0) ApplyFilter();
+    }
+
+    private static string SanitizeFileName(string name)
+    {
+        var clean = new string(name.Where(ch => !Path.GetInvalidFileNameChars().Contains(ch)).ToArray()).Trim();
+        return string.IsNullOrWhiteSpace(clean) ? "track" : clean;
+    }
+
+    partial void OnIsBusyChanged(bool value) => OnPropertyChanged(nameof(CanModify));
 
     private void ApplyFilter()
     {
@@ -142,12 +217,14 @@ public partial class OnlineLibraryViewModel : ObservableObject
                 track.DisplayCategory.Contains(keyword, StringComparison.CurrentCultureIgnoreCase));
         }
 
-        if (SelectedCategoryKey != AllCategoryKey)
+        if (!string.IsNullOrEmpty(SelectedCategoryKey) && SelectedCategoryKey != AllCategoryKey)
         {
             filtered = filtered.Where(track => string.Equals(track.Category, SelectedCategoryKey, StringComparison.OrdinalIgnoreCase));
         }
 
+        foreach (var track in filtered) track.IsFavorite = _favoriteIds.Contains(track.Id);
         filtered = ApplySizeFilter(filtered);
+        if (OnlyFavorites) filtered = filtered.Where(track => track.IsFavorite);
         var list = filtered.ToList();
         ApplySort(list);
 
@@ -156,7 +233,7 @@ public partial class OnlineLibraryViewModel : ObservableObject
         OnPropertyChanged(nameof(TracksView));
         Total = _filtered.Count;
         SelectedTrack = _filtered.FirstOrDefault();
-        StatusText = $"显示 {Total:N0} 首；可用搜索、分类、大小和排序缩小范围";
+        StatusText = $"共 {Total:N0} 首";
     }
 
     private IEnumerable<OnlineMidiTrack> ApplySizeFilter(IEnumerable<OnlineMidiTrack> source)
@@ -205,10 +282,8 @@ public partial class OnlineLibraryViewModel : ObservableObject
             }
         }
 
-        if (!Categories.Any(option => option.Key == previous))
-        {
-            SelectedCategoryKey = AllCategoryKey;
-        }
+        // Clear 会把 SelectedValue 写回 null，必须无条件恢复选中项。
+        SelectedCategoryKey = Categories.Any(option => option.Key == previous) ? previous : AllCategoryKey;
     }
 
     partial void OnQueryChanged(string value)
@@ -216,9 +291,9 @@ public partial class OnlineLibraryViewModel : ObservableObject
         if (_catalog.Count > 0) ApplyFilter();
     }
 
-    partial void OnSelectedCategoryKeyChanged(string value)
+    partial void OnSelectedCategoryKeyChanged(string? value)
     {
-        if (_catalog.Count > 0) ApplyFilter();
+        if (_catalog.Count > 0 && value is not null) ApplyFilter();
     }
 
     partial void OnSizeFilterChanged(string value)
@@ -231,13 +306,27 @@ public partial class OnlineLibraryViewModel : ObservableObject
         if (_catalog.Count > 0) ApplyFilter();
     }
 
+    partial void OnOnlyFavoritesChanged(bool value)
+    {
+        if (_catalog.Count > 0) ApplyFilter();
+    }
+
+    public bool CanModify => !IsBusy;
+
     private sealed record OnlineCatalog(int SchemaVersion, List<OnlineMidiTrack>? Tracks);
 }
 
 public sealed record CategoryOption(string Key, string Display);
 
-public sealed record OnlineMidiTrack(string Id, string Name, string Category, string Path, string Sha256, long Bytes)
+public sealed partial class OnlineMidiTrack : ObservableObject
 {
+    public string Id { get; init; } = "";
+    public string Name { get; init; } = "";
+    public string Category { get; init; } = "";
+    public string Path { get; init; } = "";
+    public string Sha256 { get; init; } = "";
+    public long Bytes { get; set; }
+
     public string DisplayCategory => Category switch
     {
         "game-music" => "游戏音乐",
@@ -249,6 +338,15 @@ public sealed record OnlineMidiTrack(string Id, string Name, string Category, st
         "world-pop" => "欧美与其他",
         _ => "未分类",
     };
+
+    public string SizeLabel => Bytes switch
+    {
+        >= 1024 * 1024 => $"{Bytes / (1024d * 1024):0.##} MB",
+        >= 1024 => $"{Bytes / 1024d:0.#} KB",
+        _ => $"{Bytes} B",
+    };
+
+    [ObservableProperty] private bool isFavorite;
 }
 
-public sealed record OnlineMidiPayload(string Name, byte[] Content);
+public sealed record OnlineMidiPayload(string Name, byte[] Content, string CacheKey);
