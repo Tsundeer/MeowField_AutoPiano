@@ -64,6 +64,9 @@ htmlcov/
 # Misc
 *.mid
 *.midi
+!src/MeowField.Infrastructure.Midi/
+!src/MeowField.Infrastructure.Midi/*.cs
+!src/MeowField.Infrastructure.Midi/*.csproj
 *.bak
 *.tmp
 .env
