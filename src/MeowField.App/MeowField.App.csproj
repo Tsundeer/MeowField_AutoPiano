@@ -43,4 +43,16 @@
     <StartupObject>MeowField.App.Program</StartupObject>
     <SatelliteResourceLanguages>zh-Hans</SatelliteResourceLanguages>
   </PropertyGroup>
+
+  <!--
+    DryWetMidi 会随包带上 macOS 原生的 Melanchall_DryWetMidi_Native64.dylib。
+    Windows 安装包里不需要它，而且发布后立刻删除会被占用（句柄由扫描/构建节点持有），
+    所以直接在发布列表里剔除，既减小体积也避免删除失败。
+  -->
+  <Target Name="DropMacNativeAssets" AfterTargets="ComputeResolvedFilesToPublishList">
+    <ItemGroup>
+      <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)"
+                             Condition="'%(ResolvedFileToPublish.Extension)' == '.dylib'" />
+    </ItemGroup>
+  </Target>
 </Project>
