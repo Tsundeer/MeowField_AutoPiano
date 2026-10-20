@@ -147,20 +147,20 @@ public sealed class RemoteLibraryClient : IRemoteLibraryClient, IDisposable
             try
             {
                 payload = await GetAsync(source.CompressedCatalogUri, cancellationToken).ConfigureAwait(false);
-                payload = DecompressIfGzip(payload);
+                payload = Normalize(payload);
             }
             catch (HttpRequestException exception) when (exception.StatusCode == HttpStatusCode.NotFound)
             {
                 // 镜像没有生成 .gz 时记下来，本次会话不再重试。
                 _gzipRejected.Add(source.BaseUrl);
                 payload = await GetAsync(source.CatalogUri, cancellationToken).ConfigureAwait(false);
-                payload = DecompressIfGzip(payload);
+                payload = Normalize(payload);
             }
         }
         else
         {
             payload = await GetAsync(source.CatalogUri, cancellationToken).ConfigureAwait(false);
-            payload = DecompressIfGzip(payload);
+            payload = Normalize(payload);
         }
 
         var document = JsonSerializer.Deserialize<CatalogDocument>(payload, JsonOptions);
@@ -199,6 +199,22 @@ public sealed class RemoteLibraryClient : IRemoteLibraryClient, IDisposable
         return hash.Equals(track.Sha256, StringComparison.OrdinalIgnoreCase);
     }
 
+    private static byte[] Normalize(byte[] payload) => StripUtf8Bom(DecompressIfGzip(payload));
+
+    /// <summary>
+    /// 上游 catalog.json 是带 BOM 的 UTF-8。System.Text.Json 解析字节片段时不会跳过 BOM，
+    /// 会直接抛 “'0xEF' is an invalid start of a value”，所以必须自己剥掉。
+    /// </summary>
+    private static byte[] StripUtf8Bom(byte[] payload)
+    {
+        if (payload.Length >= 3 && payload[0] == 0xEF && payload[1] == 0xBB && payload[2] == 0xBF)
+        {
+            return payload[3..];
+        }
+
+        return payload;
+    }
+
     private static byte[] DecompressIfGzip(byte[] payload)
     {
         if (payload.Length < 2 || payload[0] != 0x1F || payload[1] != 0x8B)
@@ -225,7 +241,7 @@ public sealed class RemoteLibraryClient : IRemoteLibraryClient, IDisposable
             }
 
             var payload = await File.ReadAllBytesAsync(CachePath, cancellationToken).ConfigureAwait(false);
-            var document = JsonSerializer.Deserialize<CatalogDocument>(payload, JsonOptions);
+            var document = JsonSerializer.Deserialize<CatalogDocument>(StripUtf8Bom(payload), JsonOptions);
             if (document?.Tracks is null || document.Tracks.Count == 0)
             {
                 return null;

@@ -144,6 +144,38 @@ public sealed class RemoteLibraryClientTests : IDisposable
         Assert.Contains("下载失败", exception.UserMessage, StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task LoadCatalogAsync_ToleratesUtf8Bom_FromUpstreamCatalog(bool compressed)
+    {
+        // 上游 catalog.json 带 BOM。System.Text.Json 直接解析字节时不跳过 BOM，
+        // 会抛 "'0xEF' is an invalid start of a value"，整页曲库就此空白。
+        var handler = new StubHandler();
+        var bytes = TrackBytes();
+        var json = Catalog(BuildCatalogJson(Sha256(bytes), bytes.Length));
+        var withBom = new byte[json.Length + 3];
+        withBom[0] = 0xEF;
+        withBom[1] = 0xBB;
+        withBom[2] = 0xBF;
+        json.CopyTo(withBom, 3);
+
+        if (compressed)
+        {
+            handler.Map(Primary.CompressedCatalogUri, Gzip(withBom));
+        }
+        else
+        {
+            handler.Map(Primary.CatalogUri, withBom);
+        }
+
+        using var client = new RemoteLibraryClient([Primary], _cacheDirectory, handler);
+        var catalog = await client.LoadCatalogAsync(forceRefresh: false);
+
+        Assert.Single(catalog.Tracks);
+        Assert.Equal("测试曲", catalog.Tracks[0].Name);
+    }
+
     [Fact]
     public void TrackUri_KeepsPathSeparators_AndEncodesUnicode()
     {
