@@ -71,3 +71,4 @@ htmlcov/
 *.tmp
 .env
 .env.local
+.workbuddy/

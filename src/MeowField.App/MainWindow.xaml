@@ -11,169 +11,180 @@
         mc:Ignorable="d"
         Title="MeowField_AutoPiano"
         Icon="Assets/MeowField_AutoPiano.ico"
-        Width="1180" Height="760" MinWidth="1000" MinHeight="680"
-        WindowStyle="None" ResizeMode="CanResize" AllowsTransparency="False"
+        Width="1440" Height="920" MinWidth="1210" MinHeight="790"
+        WindowStyle="None" ResizeMode="CanResize" AllowsTransparency="True" Background="Transparent"
         WindowStartupLocation="CenterScreen"
         AllowDrop="True" Drop="OnDrop">
     <shell:WindowChrome.WindowChrome>
-        <shell:WindowChrome CaptionHeight="0" ResizeBorderThickness="6" GlassFrameThickness="0" UseAeroCaptionButtons="False" />
+        <shell:WindowChrome CaptionHeight="0" ResizeBorderThickness="10" GlassFrameThickness="0" CornerRadius="0" UseAeroCaptionButtons="False" />
     </shell:WindowChrome.WindowChrome>
-    <Grid x:Name="RootGrid" Background="{DynamicResource Brush.Surface.App}">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="52" />
-            <RowDefinition Height="*" />
-            <RowDefinition Height="64" />
-        </Grid.RowDefinitions>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="176" />
-            <ColumnDefinition Width="*" />
-        </Grid.ColumnDefinitions>
+    <Grid x:Name="RootGrid" Background="#01FFFFFF" MouseLeftButtonDown="OnRootMouseDown">
+        <Grid x:Name="ShellGrid" Margin="16,14,16,20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" MinHeight="44" />
+                <RowDefinition Height="12" />
+                <RowDefinition Height="*" MinHeight="400" />
+                <RowDefinition Height="12" />
+                <RowDefinition Height="Auto" MinHeight="60" />
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" MinWidth="168" MaxWidth="240" />
+                <ColumnDefinition Width="12" />
+                <ColumnDefinition Width="*" MinWidth="600" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
 
-        <Border Grid.Row="0" Grid.ColumnSpan="2" Background="{DynamicResource Brush.Surface.Panel}"
-                MouseLeftButtonDown="OnTitleBarMouseDown"
-                BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="0,0,0,1">
-            <Grid Margin="18,0">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="24" />
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
-                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <Border Width="28" Height="28" CornerRadius="6" Background="{DynamicResource Brush.Accent.Primary}">
-                        <iconPacks:PackIconLucide Kind="Music" Width="17" Height="17" Foreground="White"
-                                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
-                    </Border>
-                    <TextBlock Margin="10,0,0,0" FontWeight="SemiBold" FontSize="15" Text="薮猫" />
-                    <TextBlock Margin="7,0,0,0" Style="{StaticResource SecondaryText}" VerticalAlignment="Center" Text="MeowField_AutoPiano" />
-                    <Border Margin="8,0,0,0" Padding="6,2" CornerRadius="4" Background="{DynamicResource Brush.Accent.Soft}">
-                        <TextBlock FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource Brush.Accent.Primary}" Text="{Binding VersionBadge}" />
-                    </Border>
-                </StackPanel>
-                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                    <iconPacks:PackIconLucide Kind="Monitor" Width="15" Height="15" Foreground="{DynamicResource Brush.Text.Secondary}" />
-                    <TextBlock Margin="7,0,0,0" Text="{Binding SelectedWindow.DisplayName, TargetNullValue=未绑定目标窗口}" />
-                </StackPanel>
-                <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Right">
-                    <Border Padding="8,4" Margin="0,0,8,0" CornerRadius="4" Background="{DynamicResource Brush.Surface.Subtle}">
-                        <TextBlock Text="{Binding PermissionText}" FontSize="12" Foreground="{DynamicResource Brush.Text.Secondary}" />
-                    </Border>
-                    <Button Style="{StaticResource IconButton}" Command="{Binding ToggleThemeCommand}" ToolTip="主题">
-                        <iconPacks:PackIconLucide Kind="Moon" Width="16" Height="16" />
-                    </Button>
-                    <Button Margin="6,0,0,0" Width="42" Command="{Binding ToggleLanguageCommand}" ToolTip="语言">
-                        <TextBlock Text="{Binding LanguageLabel}" FontWeight="SemiBold" HorizontalAlignment="Center" />
-                    </Button>
-                    <Button Margin="6,0,0,0" Style="{StaticResource IconButton}" ToolTip="设置">
-                        <iconPacks:PackIconLucide Kind="Settings" Width="16" Height="16" />
-                    </Button>
-                    <Button Margin="12,0,0,0" Style="{StaticResource WindowChromeButton}" Click="OnMinimizeClick" ToolTip="最小化"><iconPacks:PackIconLucide Kind="Minus" Width="15" Height="15" /></Button>
-                    <Button Style="{StaticResource WindowChromeButton}" Click="OnMaximizeClick" ToolTip="最大化"><iconPacks:PackIconLucide Kind="Square" Width="13" Height="13" /></Button>
-                    <Button Style="{StaticResource WindowChromeCloseButton}" Click="OnCloseClick" ToolTip="关闭"><iconPacks:PackIconLucide Kind="X" Width="15" Height="15" /></Button>
-                </StackPanel>
-            </Grid>
-        </Border>
-
-        <Border Grid.Row="1" Grid.RowSpan="2" Background="{DynamicResource Brush.Surface.Panel}"
-                BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="0,0,1,0">
-            <Grid Margin="10,14,10,12">
-                <Grid.RowDefinitions><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
-                <StackPanel>
-                    <Button Style="{StaticResource NavButton}" Tag="{Binding IsPlaybackVisible}" Command="{Binding NavigateCommand}" CommandParameter="playback">
-                        <StackPanel Orientation="Horizontal"><iconPacks:PackIconLucide Kind="Play" Width="17" Height="17" /><TextBlock Margin="11,0,0,0" Text="播放" /></StackPanel>
-                    </Button>
-                    <Button Style="{StaticResource NavButton}" Tag="{Binding IsLibraryVisible}" Margin="0,4,0,0" Command="{Binding NavigateCommand}" CommandParameter="library">
-                        <StackPanel Orientation="Horizontal"><iconPacks:PackIconLucide Kind="Library" Width="17" Height="17" /><TextBlock Margin="11,0,0,0" Text="曲库" /></StackPanel>
-                    </Button>
-                    <Button Style="{StaticResource NavButton}" Tag="{Binding IsOnlineLibraryVisible}" Margin="0,4,0,0" Command="{Binding NavigateCommand}" CommandParameter="online-library">
-                        <StackPanel Orientation="Horizontal"><iconPacks:PackIconLucide Kind="CloudDownload" Width="17" Height="17" /><TextBlock Margin="11,0,0,0" Text="在线曲库" /></StackPanel>
-                    </Button>
-                    <Button Style="{StaticResource NavButton}" Tag="{Binding IsScheduleVisible}" Margin="0,4,0,0" Command="{Binding NavigateCommand}" CommandParameter="schedule">
-                        <StackPanel Orientation="Horizontal"><iconPacks:PackIconLucide Kind="Clock" Width="17" Height="17" /><TextBlock Margin="11,0,0,0" Text="定时任务" /></StackPanel>
-                    </Button>
-                    <Button Style="{StaticResource NavButton}" Tag="{Binding IsConverterVisible}" Margin="0,4,0,0" Command="{Binding NavigateCommand}" CommandParameter="converter">
-                        <StackPanel Orientation="Horizontal"><iconPacks:PackIconLucide Kind="AudioLines" Width="17" Height="17" /><TextBlock Margin="11,0,0,0" Text="音频转谱" /></StackPanel>
-                    </Button>
-                    <Button Style="{StaticResource NavButton}" Tag="{Binding IsProfilesVisible}" Margin="0,4,0,0" Command="{Binding NavigateCommand}" CommandParameter="profiles">
-                        <StackPanel Orientation="Horizontal"><iconPacks:PackIconLucide Kind="SlidersHorizontal" Width="17" Height="17" /><TextBlock Margin="11,0,0,0" Text="键位与预设" /></StackPanel>
-                    </Button>
-                </StackPanel>
-                <Button Grid.Row="1" VerticalAlignment="Top" Style="{StaticResource NavButton}" Tag="{Binding IsSettingsVisible}" Margin="0,0,0,44" Command="{Binding NavigateCommand}" CommandParameter="settings">
-                    <StackPanel Orientation="Horizontal"><iconPacks:PackIconLucide Kind="Settings" Width="17" Height="17" /><TextBlock Margin="11,0,0,0" Text="设置" /></StackPanel>
-                </Button>
-                <Button Grid.Row="1" VerticalAlignment="Bottom" Style="{StaticResource NavButton}" Tag="{Binding IsDiagnosticsVisible}" Command="{Binding NavigateCommand}" CommandParameter="diagnostics">
-                    <StackPanel Orientation="Horizontal"><iconPacks:PackIconLucide Kind="FileText" Width="17" Height="17" /><TextBlock Margin="11,0,0,0" Text="日志与诊断" /></StackPanel>
-                </Button>
-            </Grid>
-        </Border>
-
-        <Grid Grid.Row="1" Grid.Column="1" Visibility="{Binding IsPlaybackVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
-            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="320" /></Grid.ColumnDefinitions>
-
-            <Grid Margin="24,20,20,18">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" /><RowDefinition Height="16" /><RowDefinition Height="*" /><RowDefinition Height="18" /><RowDefinition Height="136" />
-                </Grid.RowDefinitions>
-                <Grid>
+            <ContentControl Grid.Row="0" Grid.Column="2" Grid.ColumnSpan="2" Style="{StaticResource GlassCard}" Padding="14,0,6,0"
+                            MouseLeftButtonDown="OnTitleBarMouseDown">
+                <Grid Background="Transparent">
                     <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                    <StackPanel>
-                        <TextBlock Style="{StaticResource HeadingText}" Text="{Binding FileName}" TextTrimming="CharacterEllipsis" />
-                        <TextBlock Margin="0,5,0,0" Style="{StaticResource SecondaryText}" Text="{Binding FilePath}" TextTrimming="CharacterEllipsis" />
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <iconPacks:PackIconLucide Kind="Monitor" Width="14" Height="14" VerticalAlignment="Center" Foreground="{DynamicResource Brush.Text.Secondary}" />
+                        <TextBlock Margin="8,0,0,0" FontSize="12" Text="{Binding SelectedWindow.DisplayName, TargetNullValue=未绑定目标窗口}" TextTrimming="CharacterEllipsis" MaxWidth="420" />
                     </StackPanel>
-                    <Button Grid.Column="1" Command="{Binding OpenMidiCommand}" Style="{StaticResource PrimaryButton}" Padding="14,0">
-                        <StackPanel Orientation="Horizontal"><iconPacks:PackIconLucide Kind="FolderOpen" Width="16" Height="16" /><TextBlock Margin="8,0,0,0" Text="打开 MIDI" /></StackPanel>
-                    </Button>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Border Padding="9,3" Margin="0,0,8,0" CornerRadius="10" Background="{DynamicResource Brush.Surface.Subtle}">
+                            <TextBlock Text="{Binding PermissionText}" FontSize="12" Foreground="{DynamicResource Brush.Text.Secondary}" />
+                        </Border>
+                        <Button Height="30" Style="{StaticResource IconButton}" Command="{Binding ToggleThemeCommand}" ToolTip="主题">
+                            <iconPacks:PackIconLucide Kind="Moon" Width="15" Height="15" />
+                        </Button>
+                        <Button Margin="6,0,0,0" Height="30" Width="40" Command="{Binding ToggleLanguageCommand}" ToolTip="语言">
+                            <TextBlock Text="{Binding LanguageLabel}" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                        </Button>
+                        <Border Width="1" Height="18" Margin="10,0,4,0" Background="{DynamicResource Brush.Border.Default}" />
+                        <Button Style="{StaticResource WindowChromeButton}" Click="OnMinimizeClick" ToolTip="最小化"><iconPacks:PackIconLucide Kind="Minus" Width="15" Height="15" /></Button>
+                        <Button Style="{StaticResource WindowChromeButton}" Click="OnMaximizeClick" ToolTip="最大化"><iconPacks:PackIconLucide Kind="Square" Width="13" Height="13" /></Button>
+                        <Button Style="{StaticResource WindowChromeCloseButton}" Click="OnCloseClick" ToolTip="关闭"><iconPacks:PackIconLucide Kind="X" Width="15" Height="15" /></Button>
+                    </StackPanel>
                 </Grid>
+            </ContentControl>
 
-                <Border Grid.Row="2" Background="{DynamicResource Brush.Surface.Panel}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1" CornerRadius="6">
-                    <Grid>
-                        <Grid.RowDefinitions><RowDefinition Height="40" /><RowDefinition Height="*" /><RowDefinition Height="42" /></Grid.RowDefinitions>
-                        <Grid Margin="16,0">
-                            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="24" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                            <TextBlock FontWeight="SemiBold" Text="音符预览" />
-                            <TextBlock Grid.Column="1" Style="{StaticResource SecondaryText}" Text="{Binding NoteCountLabel}" />
-                            <TextBlock Grid.Column="3" Style="{StaticResource SecondaryText}" Text="{Binding EventCountLabel}" />
-                        </Grid>
-                        <Grid Grid.Row="1" Margin="16,0,16,0" ClipToBounds="True">
-                            <Border VerticalAlignment="Center" Height="1" Background="{DynamicResource Brush.Border.Default}" />
-                            <controls:MidiTimelineControl Notes="{Binding TimelineNotes}" DurationMs="{Binding DurationMilliseconds}" CursorMs="{Binding ElapsedMilliseconds}" />
-                        </Grid>
-                        <Border Grid.Row="2" Background="{DynamicResource Brush.Surface.Subtle}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="0,1,0,0">
-                            <StackPanel Orientation="Horizontal" Margin="14,0" VerticalAlignment="Center">
-                                <TextBlock Style="{StaticResource SecondaryText}" Text="活动键位" />
-                                <TextBlock Margin="14,0,0,0" FontFamily="Consolas" FontWeight="SemiBold" Foreground="{DynamicResource Brush.Accent.Primary}" Text="{Binding ActiveKeysText}" />
+            <ContentControl Grid.RowSpan="5" Style="{StaticResource GlassCard}" Padding="10,12,10,12">
+                <Grid>
+                    <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+                    <Border Background="Transparent" Padding="6,4,6,14" MouseLeftButtonDown="OnTitleBarMouseDown">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <Border Width="28" Height="28" CornerRadius="9" Background="{DynamicResource Brush.Accent.Gradient}">
+                                    <iconPacks:PackIconLucide Kind="Music" Width="15" Height="15" Foreground="White"
+                                                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+                                <TextBlock Margin="10,0,0,0" FontWeight="SemiBold" FontSize="15" Text="薮猫" />
                             </StackPanel>
+                            <StackPanel Margin="0,8,0,0" Orientation="Horizontal">
+                                <TextBlock FontSize="11" Style="{StaticResource SecondaryText}" Text="MeowField_AutoPiano" />
+                                <Border Margin="6,0,0,0" Padding="6,1" CornerRadius="7" Background="{DynamicResource Brush.Accent.Soft}">
+                                    <TextBlock FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource Brush.Accent.Primary}" Text="{Binding VersionBadge}" />
+                                </Border>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                    <StackPanel Grid.Row="1">
+                        <Button Style="{StaticResource NavButton}" Tag="{Binding IsPlaybackVisible}" Command="{Binding NavigateCommand}" CommandParameter="playback">
+                            <StackPanel Orientation="Horizontal"><iconPacks:PackIconLucide Kind="Play" Width="17" Height="17" /><TextBlock Margin="11,0,0,0" Text="播放" /></StackPanel>
+                        </Button>
+<Button Style="{StaticResource NavButton}" Tag="{Binding IsLibraryVisible}" Margin="0,4,0,0" Command="{Binding NavigateCommand}" CommandParameter="library">
+                            <StackPanel Orientation="Horizontal"><iconPacks:PackIconLucide Kind="Library" Width="17" Height="17" /><TextBlock Margin="11,0,0,0" Text="曲库" /></StackPanel>
+                        </Button>
+                        <Button Style="{StaticResource NavButton}" Tag="{Binding IsOnlineLibraryVisible}" Margin="0,4,0,0" Command="{Binding NavigateCommand}" CommandParameter="online-library">
+                            <StackPanel Orientation="Horizontal"><iconPacks:PackIconLucide Kind="CloudDownload" Width="17" Height="17" /><TextBlock Margin="11,0,0,0" Text="在线曲库" /></StackPanel>
+                        </Button>
+                        <Button Style="{StaticResource NavButton}" Tag="{Binding IsScheduleVisible}" Margin="0,4,0,0" Command="{Binding NavigateCommand}" CommandParameter="schedule">
+                            <StackPanel Orientation="Horizontal"><iconPacks:PackIconLucide Kind="Clock" Width="17" Height="17" /><TextBlock Margin="11,0,0,0" Text="定时任务" /></StackPanel>
+                        </Button>
+                        <Button Style="{StaticResource NavButton}" Tag="{Binding IsConverterVisible}" Margin="0,4,0,0" Command="{Binding NavigateCommand}" CommandParameter="converter">
+                            <StackPanel Orientation="Horizontal"><iconPacks:PackIconLucide Kind="AudioLines" Width="17" Height="17" /><TextBlock Margin="11,0,0,0" Text="音频转谱" /></StackPanel>
+                        </Button>
+                        <Button Style="{StaticResource NavButton}" Tag="{Binding IsProfilesVisible}" Margin="0,4,0,0" Command="{Binding NavigateCommand}" CommandParameter="profiles">
+                            <StackPanel Orientation="Horizontal"><iconPacks:PackIconLucide Kind="SlidersHorizontal" Width="17" Height="17" /><TextBlock Margin="11,0,0,0" Text="键位与预设" /></StackPanel>
+                        </Button>
+                    </StackPanel>
+                    <StackPanel Grid.Row="2">
+                        <Button Style="{StaticResource NavButton}" Tag="{Binding IsSettingsVisible}" Command="{Binding NavigateCommand}" CommandParameter="settings">
+                            <StackPanel Orientation="Horizontal"><iconPacks:PackIconLucide Kind="Settings" Width="17" Height="17" /><TextBlock Margin="11,0,0,0" Text="设置" /></StackPanel>
+                        </Button>
+                        <Button Style="{StaticResource NavButton}" Tag="{Binding IsDiagnosticsVisible}" Margin="0,4,0,0" Command="{Binding NavigateCommand}" CommandParameter="diagnostics">
+                            <StackPanel Orientation="Horizontal"><iconPacks:PackIconLucide Kind="FileText" Width="17" Height="17" /><TextBlock Margin="11,0,0,0" Text="日志与诊断" /></StackPanel>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </ContentControl>
+
+            <Grid Grid.Row="2" Grid.Column="2" Visibility="{Binding IsPlaybackVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" /><RowDefinition Height="12" /><RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <ContentControl Style="{StaticResource GlassCard}" Padding="16,14,16,14">
+                    <Grid>
+                        <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="12" /><RowDefinition Height="*" /></Grid.RowDefinitions>
+                        <Grid>
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource HeadingText}" Text="{Binding FileName}" TextTrimming="CharacterEllipsis" />
+                                <TextBlock Margin="0,4,0,0" FontSize="12" Style="{StaticResource SecondaryText}" Text="{Binding FilePath}" TextTrimming="CharacterEllipsis" />
+                            </StackPanel>
+                            <Button Grid.Column="1" VerticalAlignment="Top" Command="{Binding OpenMidiCommand}" Style="{StaticResource PrimaryButton}" Padding="14,0">
+                                <StackPanel Orientation="Horizontal"><iconPacks:PackIconLucide Kind="FolderOpen" Width="16" Height="16" /><TextBlock Margin="8,0,0,0" Foreground="White" Text="打开 MIDI" /></StackPanel>
+                            </Button>
+                        </Grid>
+
+                        <Border Grid.Row="2" Background="{DynamicResource Brush.Surface.Subtle}" BorderBrush="{DynamicResource Brush.Border.Glass}" BorderThickness="1" CornerRadius="12" ClipToBounds="True">
+                            <Grid>
+                                <Grid.RowDefinitions><RowDefinition Height="36" /><RowDefinition Height="*" /><RowDefinition Height="38" /></Grid.RowDefinitions>
+                                <Grid Margin="14,0">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="24" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                    <TextBlock Style="{StaticResource CardTitle}" Text="音符预览" />
+                                    <TextBlock Grid.Column="1" FontSize="12" Style="{StaticResource SecondaryText}" Text="{Binding NoteCountLabel}" />
+                                    <TextBlock Grid.Column="3" FontSize="12" Style="{StaticResource SecondaryText}" Text="{Binding EventCountLabel}" />
+                                </Grid>
+                                <Border Grid.Row="1" Margin="10,0" CornerRadius="8" Background="{DynamicResource Brush.Surface.Panel}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1" ClipToBounds="True">
+                                    <Grid>
+                                        <iconPacks:PackIconLucide Kind="Music" Width="120" Height="120" Margin="0,0,28,18" HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                                                                   Foreground="{DynamicResource Brush.Accent.Primary}" Opacity="0.08" IsHitTestVisible="False" />
+                                        <Border VerticalAlignment="Center" Height="1" Background="{DynamicResource Brush.Border.Default}" />
+                                        <controls:MidiTimelineControl Margin="6,0" Notes="{Binding TimelineNotes}" DurationMs="{Binding DurationMilliseconds}" CursorMs="{Binding ElapsedMilliseconds}" />
+                                    </Grid>
+                                </Border>
+                                <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="14,0" VerticalAlignment="Center">
+                                    <TextBlock FontSize="12" Style="{StaticResource SecondaryText}" Text="活动键位" />
+                                    <TextBlock Margin="14,0,0,0" FontFamily="Consolas" FontWeight="SemiBold" Foreground="{DynamicResource Brush.Accent.Primary}" Text="{Binding ActiveKeysText}" />
+                                </StackPanel>
+                            </Grid>
                         </Border>
                     </Grid>
-                </Border>
+                </ContentControl>
 
-                <Border Grid.Row="4" Background="{DynamicResource Brush.Surface.Panel}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1" CornerRadius="6" Padding="14">
+                <ContentControl Grid.Row="2" Height="148" Style="{StaticResource GlassCard}" Padding="16,12,16,14">
                     <Grid>
                         <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="10" /><RowDefinition Height="*" /></Grid.RowDefinitions>
                         <Grid>
                             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                            <TextBlock FontWeight="SemiBold" Text="虚拟键盘" />
-                            <TextBlock Grid.Column="1" Style="{StaticResource SecondaryText}" Text="{Binding KeyboardCountText}" />
+                            <TextBlock Style="{StaticResource CardTitle}" Text="虚拟键盘" />
+                            <TextBlock Grid.Column="1" FontSize="12" Style="{StaticResource SecondaryText}" Text="{Binding KeyboardCountText}" />
                         </Grid>
                         <ItemsControl Grid.Row="2" ItemsSource="{Binding KeyboardKeys}">
                             <ItemsControl.ItemsPanel><ItemsPanelTemplate><UniformGrid Rows="{Binding KeyboardRows}" Columns="{Binding KeyboardColumns}" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Border Margin="2" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1" CornerRadius="3">
+                                    <Border Margin="3" BorderThickness="1" CornerRadius="6">
                                         <Border.Style>
                                             <Style TargetType="Border">
-                                                <Setter Property="Background" Value="{DynamicResource Brush.Surface.Subtle}" />
+                                                <Setter Property="Background" Value="{DynamicResource Brush.Surface.Panel}" />
+                                                <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Default}" />
                                                 <Style.Triggers>
                                                     <DataTrigger Binding="{Binding IsActive}" Value="True">
-                                                        <Setter Property="Background" Value="{DynamicResource Brush.Accent.Primary}" />
+                                                        <Setter Property="Background" Value="{DynamicResource Brush.Accent.Gradient}" />
                                                         <Setter Property="BorderBrush" Value="{DynamicResource Brush.Accent.Primary}" />
                                                     </DataTrigger>
                                                 </Style.Triggers>
                                             </Style>
                                         </Border.Style>
-                                        <TextBlock HorizontalAlignment="Center" FontFamily="Consolas" FontWeight="SemiBold" Text="{Binding Label}">
+                                        <TextBlock HorizontalAlignment="Center" FontSize="12" FontFamily="Consolas" FontWeight="SemiBold" Text="{Binding Label}">
                                             <TextBlock.Style>
                                                 <Style TargetType="TextBlock">
+                                                    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Primary}" />
                                                     <Style.Triggers><DataTrigger Binding="{Binding IsActive}" Value="True"><Setter Property="Foreground" Value="White" /></DataTrigger></Style.Triggers>
                                                 </Style>
                                             </TextBlock.Style>
@@ -183,21 +194,22 @@
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
                     </Grid>
-                </Border>
+                </ContentControl>
             </Grid>
 
-            <Border Grid.Column="1" Background="{DynamicResource Brush.Surface.Panel}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1,0,0,0">
+            <ContentControl Grid.Row="2" Grid.Column="3" Grid.RowSpan="3" Width="300" Margin="12,0,0,0" Style="{StaticResource GlassCard}" Padding="4,14,4,14"
+                            Visibility="{Binding IsPlaybackVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                    <StackPanel Margin="18,20" IsEnabled="{Binding CanEditPlaybackSettings}">
-                        <TextBlock FontWeight="SemiBold" Text="播放参数" />
-                        <TextBlock Margin="0,18,0,6" Style="{StaticResource SecondaryText}" Text="目标窗口" />
+                    <StackPanel Margin="12,0" IsEnabled="{Binding CanEditPlaybackSettings}">
+                        <TextBlock Style="{StaticResource CardTitle}" Text="播放参数" />
+                        <TextBlock Margin="0,14,0,6" FontSize="12" Style="{StaticResource SecondaryText}" Text="目标窗口" />
                         <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="38" /></Grid.ColumnDefinitions>
                             <ComboBox ItemsSource="{Binding Windows}" SelectedItem="{Binding SelectedWindow}" DisplayMemberPath="DisplayName" />
-                            <Button Grid.Column="1" Margin="6,0,0,0" Style="{StaticResource IconButton}" Command="{Binding RefreshWindowsCommand}" ToolTip="刷新窗口">
+                            <Button Grid.Column="1" Margin="6,0,0,0" Height="38" Style="{StaticResource IconButton}" Command="{Binding RefreshWindowsCommand}" ToolTip="刷新窗口">
                                 <iconPacks:PackIconLucide Kind="RefreshCw" Width="15" Height="15" />
                             </Button>
                         </Grid>
-                        <TextBlock Margin="0,14,0,6" Style="{StaticResource SecondaryText}" Text="输入方式" />
+                        <TextBlock Margin="0,12,0,6" FontSize="12" Style="{StaticResource SecondaryText}" Text="输入方式" />
                         <ComboBox ItemsSource="{Binding InputModes}" SelectedItem="{Binding InputMode}">
                             <ComboBox.ItemTemplate>
                                 <DataTemplate>
@@ -212,7 +224,7 @@
                                 </DataTemplate>
                             </ComboBox.ItemTemplate>
                         </ComboBox>
-                        <TextBlock Margin="0,14,0,6" Style="{StaticResource SecondaryText}" Text="乐器 / 档案" />
+                        <TextBlock Margin="0,12,0,6" FontSize="12" Style="{StaticResource SecondaryText}" Text="乐器" />
                         <ComboBox ItemsSource="{Binding InstrumentChoices}" SelectedItem="{Binding SelectedInstrumentChoice}">
                             <ComboBox.ItemTemplate>
                                 <DataTemplate>
@@ -227,7 +239,7 @@
                                 </DataTemplate>
                             </ComboBox.ItemTemplate>
                         </ComboBox>
-                        <TextBlock Margin="0,14,0,6" Style="{StaticResource SecondaryText}" Text="和弦处理" />
+                        <TextBlock Margin="0,12,0,6" FontSize="12" Style="{StaticResource SecondaryText}" Text="和弦处理" />
                         <ComboBox ItemsSource="{Binding ChordModes}" SelectedItem="{Binding ChordMode}">
                             <ComboBox.ItemTemplate>
                                 <DataTemplate>
@@ -242,7 +254,7 @@
                                 </DataTemplate>
                             </ComboBox.ItemTemplate>
                         </ComboBox>
-                        <TextBlock Margin="0,14,0,6" Style="{StaticResource SecondaryText}" Text="冲突处理" />
+                        <TextBlock Margin="0,12,0,6" FontSize="12" Style="{StaticResource SecondaryText}" Text="冲突处理" />
                         <ComboBox ItemsSource="{Binding CollisionStrategies}" SelectedItem="{Binding CollisionStrategy}">
                             <ComboBox.ItemTemplate>
                                 <DataTemplate>
@@ -258,21 +270,21 @@
                             </ComboBox.ItemTemplate>
                         </ComboBox>
 
-                        <Grid Margin="0,18,0,5"><TextBlock Style="{StaticResource SecondaryText}" Text="速度" /><TextBlock HorizontalAlignment="Right" Text="{Binding Speed, StringFormat={}{0:0.00}x}" /></Grid>
+                        <Grid Margin="0,16,0,4"><TextBlock FontSize="12" Style="{StaticResource SecondaryText}" Text="速度" /><TextBlock HorizontalAlignment="Right" FontSize="12" Text="{Binding Speed, StringFormat={}{0:0.00}x}" /></Grid>
                         <Slider Minimum="0.25" Maximum="3" TickFrequency="0.05" Value="{Binding Speed}" />
-                        <Grid Margin="0,16,0,5"><TextBlock Style="{StaticResource SecondaryText}" Text="转调" /><TextBlock HorizontalAlignment="Right" Text="{Binding TransposeLabel}" /></Grid>
+                        <Grid Margin="0,12,0,4"><TextBlock FontSize="12" Style="{StaticResource SecondaryText}" Text="转调" /><TextBlock HorizontalAlignment="Right" FontSize="12" Text="{Binding TransposeLabel}" /></Grid>
                         <Slider Minimum="-24" Maximum="24" TickFrequency="1" IsSnapToTickEnabled="True" Value="{Binding Transpose}" />
-                        <Grid Margin="0,16,0,5"><TextBlock Style="{StaticResource SecondaryText}" Text="最大复音" /><TextBlock HorizontalAlignment="Right" Text="{Binding MaxPolyphony}" /></Grid>
+                        <Grid Margin="0,12,0,4"><TextBlock FontSize="12" Style="{StaticResource SecondaryText}" Text="最大复音" /><TextBlock HorizontalAlignment="Right" FontSize="12" Text="{Binding MaxPolyphony}" /></Grid>
                         <Slider Minimum="1" Maximum="21" TickFrequency="1" IsSnapToTickEnabled="True" Value="{Binding MaxPolyphony}" />
-                        <Grid Margin="0,16,0,5"><TextBlock Style="{StaticResource SecondaryText}" Text="链路补偿" /><TextBlock HorizontalAlignment="Right" Text="{Binding LinkLatencyLabel}" /></Grid>
+                        <Grid Margin="0,12,0,4"><TextBlock FontSize="12" Style="{StaticResource SecondaryText}" Text="链路补偿" /><TextBlock HorizontalAlignment="Right" FontSize="12" Text="{Binding LinkLatencyLabel}" /></Grid>
                         <Slider Minimum="-500" Maximum="500" TickFrequency="5" IsSnapToTickEnabled="True" Value="{Binding LinkLatencyMs}" />
-                        <Grid Margin="0,16,0,5"><TextBlock Style="{StaticResource SecondaryText}" Text="音域下限" /><TextBlock HorizontalAlignment="Right" Text="{Binding NoteRangeLow}" /></Grid>
+                        <Grid Margin="0,12,0,4"><TextBlock FontSize="12" Style="{StaticResource SecondaryText}" Text="音域下限" /><TextBlock HorizontalAlignment="Right" FontSize="12" Text="{Binding NoteRangeLow}" /></Grid>
                         <Slider Minimum="0" Maximum="127" TickFrequency="1" IsSnapToTickEnabled="True" Value="{Binding NoteRangeLow}" />
-                        <Grid Margin="0,12,0,5"><TextBlock Style="{StaticResource SecondaryText}" Text="音域上限" /><TextBlock HorizontalAlignment="Right" Text="{Binding NoteRangeHigh}" /></Grid>
+                        <Grid Margin="0,12,0,4"><TextBlock FontSize="12" Style="{StaticResource SecondaryText}" Text="音域上限" /><TextBlock HorizontalAlignment="Right" FontSize="12" Text="{Binding NoteRangeHigh}" /></Grid>
                         <Slider Minimum="0" Maximum="127" TickFrequency="1" IsSnapToTickEnabled="True" Value="{Binding NoteRangeHigh}" />
-                        <Grid Margin="0,14,0,0"><TextBlock Style="{StaticResource SecondaryText}" Text="适配率" /><TextBlock HorizontalAlignment="Right" Text="{Binding FitRatioLabel}" /></Grid>
-                        <TextBlock Margin="0,4,0,0" Style="{StaticResource SecondaryText}" Text="{Binding OriginalFitRatioSummary}" />
-                        <CheckBox Margin="0,18,0,0" IsChecked="{Binding PreferNearestWhite}" Content="优先映射最近白键" />
+                        <Grid Margin="0,14,0,0"><TextBlock FontSize="12" Style="{StaticResource SecondaryText}" Text="适配率" /><TextBlock HorizontalAlignment="Right" FontSize="12" Text="{Binding FitRatioLabel}" /></Grid>
+                        <TextBlock Margin="0,4,0,0" FontSize="12" Style="{StaticResource SecondaryText}" Text="{Binding OriginalFitRatioSummary}" TextWrapping="Wrap" />
+                        <CheckBox Margin="0,16,0,0" IsChecked="{Binding PreferNearestWhite}" Content="优先映射最近白键" />
                         <ComboBox Margin="0,8,0,0" ItemsSource="{Binding NearestWhiteDirections}" SelectedItem="{Binding NearestWhiteDirection}">
                             <ComboBox.ItemTemplate>
                                 <DataTemplate>
@@ -290,82 +302,100 @@
                         <CheckBox Margin="0,10,0,0" IsChecked="{Binding AutoTranspose}" Content="载入时自动移调" />
                     </StackPanel>
                 </ScrollViewer>
-            </Border>
-        </Grid>
+            </ContentControl>
 
-        <views:LibraryView Grid.Row="1" Grid.Column="1" DataContext="{Binding Library}"
-                           Visibility="{Binding DataContext.IsLibraryVisible, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BooleanToVisibilityConverter}}" />
-        <views:OnlineLibraryView Grid.Row="1" Grid.Column="1" DataContext="{Binding OnlineLibrary}"
-                                 Visibility="{Binding DataContext.IsOnlineLibraryVisible, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BooleanToVisibilityConverter}}" />
-        <views:ScheduleView Grid.Row="1" Grid.Column="1" DataContext="{Binding Schedule}"
-                            Visibility="{Binding DataContext.IsScheduleVisible, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BooleanToVisibilityConverter}}" />
-        <views:ConverterView Grid.Row="1" Grid.Column="1" DataContext="{Binding Converter}"
-                             Visibility="{Binding DataContext.IsConverterVisible, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BooleanToVisibilityConverter}}" />
-        <views:ProfilesView Grid.Row="1" Grid.Column="1" DataContext="{Binding Profiles}"
-                           Visibility="{Binding DataContext.IsProfilesVisible, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BooleanToVisibilityConverter}}" />
-        <views:DiagnosticsView Grid.Row="1" Grid.Column="1" DataContext="{Binding Diagnostics}"
-                               Visibility="{Binding DataContext.IsDiagnosticsVisible, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BooleanToVisibilityConverter}}" />
-        <views:SettingsView Grid.Row="1" Grid.Column="1"
-                            Visibility="{Binding IsSettingsVisible, Converter={StaticResource BooleanToVisibilityConverter}}" />
-
-        <Border Grid.Row="2" Grid.Column="1" Background="{DynamicResource Brush.Surface.Panel}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="0,1,0,0">
-            <Grid Margin="22,0">
-                <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                <TextBlock TextTrimming="CharacterEllipsis"><TextBlock.Text><MultiBinding Converter="{StaticResource UiTextConverter}"><Binding Path="StatusText" /><Binding Path="IsEnglish" /></MultiBinding></TextBlock.Text></TextBlock>
-                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Button Style="{StaticResource IconButton}" Command="{Binding StopCommand}" ToolTip="停止">
-                        <iconPacks:PackIconLucide Kind="Square" Width="15" Height="15" />
-                    </Button>
-                    <Button Margin="4,0,0,0" Style="{StaticResource IconButton}" Command="{Binding PlayPreviousCommand}" IsEnabled="{Binding CanPlayPrevious}" ToolTip="上一首">
-                        <iconPacks:PackIconLucide Kind="SkipBack" Width="15" Height="15" />
-                    </Button>
-                    <Button Margin="8,0" Width="92" Style="{StaticResource PrimaryButton}" Command="{Binding PlayPauseCommand}">
-                        <StackPanel Orientation="Horizontal"><iconPacks:PackIconLucide Kind="Play" Width="16" Height="16" /><TextBlock Margin="7,0,0,0" Text="{Binding PlayPauseLabel}" /></StackPanel>
-                    </Button>
-                    <Button Style="{StaticResource IconButton}" Command="{Binding PlayNextCommand}" IsEnabled="{Binding CanPlayNext}" ToolTip="下一首">
-                        <iconPacks:PackIconLucide Kind="SkipForward" Width="15" Height="15" />
-                    </Button>
-                </StackPanel>
-                <Grid Grid.Column="2" Margin="22,0">
-                    <Grid.RowDefinitions><RowDefinition Height="*" /><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
-                    <Slider Grid.Row="1" Minimum="0" Maximum="{Binding DurationMilliseconds}" Value="{Binding SeekPosition, Mode=TwoWay}"
-                            IsEnabled="{Binding HasMidi}" ToolTip="拖动以跳转播放位置"
-                            PreviewMouseLeftButtonDown="OnTimelineSeekStarted"
-                            PreviewMouseLeftButtonUp="OnTimelineSeekReleased" />
+            <ContentControl Grid.Row="2" Grid.Column="2" Grid.ColumnSpan="2" Padding="0">
+                <ContentControl.Style>
+                    <Style TargetType="ContentControl" BasedOn="{StaticResource GlassCard}">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsPlaybackVisible}" Value="True">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </ContentControl.Style>
+                <Grid>
+                    <views:LibraryView DataContext="{Binding Library}"
+                                       Visibility="{Binding DataContext.IsLibraryVisible, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                    <views:OnlineLibraryView DataContext="{Binding OnlineLibrary}"
+                                             Visibility="{Binding DataContext.IsOnlineLibraryVisible, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                    <views:ScheduleView DataContext="{Binding Schedule}"
+                                        Visibility="{Binding DataContext.IsScheduleVisible, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                    <views:ConverterView DataContext="{Binding Converter}"
+                                         Visibility="{Binding DataContext.IsConverterVisible, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                    <views:ProfilesView DataContext="{Binding Profiles}" Visibility="{Binding DataContext.IsProfilesVisible, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                    <views:DiagnosticsView DataContext="{Binding Diagnostics}"
+                                           Visibility="{Binding DataContext.IsDiagnosticsVisible, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                    <views:SettingsView Visibility="{Binding IsSettingsVisible, Converter={StaticResource BooleanToVisibilityConverter}}" />
                 </Grid>
-                <TextBlock Grid.Column="3" FontFamily="Consolas">
-                    <Run Text="{Binding ElapsedText}" /><Run Text="  /  " Foreground="{DynamicResource Brush.Text.Secondary}" /><Run Text="{Binding DurationText}" Foreground="{DynamicResource Brush.Text.Secondary}" />
-                </TextBlock>
-                <Grid Grid.Column="4" Margin="14,0,0,0" VerticalAlignment="Center">
-                    <Button Command="{Binding ToggleQueueCommand}" ToolTip="播放队列">
-                        <Button.Style>
-                            <Style TargetType="Button" BasedOn="{StaticResource IconButton}">
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsQueueOpen}" Value="True">
-                                        <Setter Property="Foreground" Value="{DynamicResource Brush.Accent.Primary}" />
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Button.Style>
-                        <iconPacks:PackIconLucide Kind="ListMusic" Width="16" Height="16" />
-                    </Button>
-                    <Border IsHitTestVisible="False" Margin="24,2,0,0" HorizontalAlignment="Left" VerticalAlignment="Top" CornerRadius="6" Background="{DynamicResource Brush.Accent.Primary}" Padding="4,1">
-                        <TextBlock FontSize="9" FontWeight="SemiBold" Foreground="White" Text="{Binding QueueCount}">
-                            <TextBlock.Style>
-                                <Style TargetType="TextBlock">
-                                    <Setter Property="Visibility" Value="Visible" />
+            </ContentControl>
+
+            <ContentControl Grid.Row="4" Grid.Column="2" Padding="18,0,12,0">
+                <ContentControl.Style>
+                    <Style TargetType="ContentControl" BasedOn="{StaticResource GlassCard}">
+                        <Setter Property="Grid.ColumnSpan" Value="2" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsPlaybackVisible}" Value="True">
+                                <Setter Property="Grid.ColumnSpan" Value="1" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </ContentControl.Style>
+                <Grid>
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="150" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                    <TextBlock FontSize="12" TextTrimming="CharacterEllipsis"><TextBlock.Text><MultiBinding Converter="{StaticResource UiTextConverter}"><Binding Path="StatusText" /><Binding Path="IsEnglish" /></MultiBinding></TextBlock.Text></TextBlock>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Button Style="{StaticResource IconButton}" Command="{Binding StopCommand}" ToolTip="停止">
+                            <iconPacks:PackIconLucide Kind="Square" Width="14" Height="14" />
+                        </Button>
+                        <Button Margin="6,0,0,0" Style="{StaticResource IconButton}" Command="{Binding PlayPreviousCommand}" IsEnabled="{Binding CanPlayPrevious}" ToolTip="上一首">
+                            <iconPacks:PackIconLucide Kind="SkipBack" Width="15" Height="15" />
+                        </Button>
+                        <Button Margin="10,0" Width="96" Style="{StaticResource PrimaryButton}" Command="{Binding PlayPauseCommand}">
+                            <StackPanel Orientation="Horizontal"><iconPacks:PackIconLucide Kind="Play" Width="16" Height="16" Foreground="White" /><TextBlock Margin="7,0,0,0" Foreground="White" Text="{Binding PlayPauseLabel}" /></StackPanel>
+                        </Button>
+                        <Button Style="{StaticResource IconButton}" Command="{Binding PlayNextCommand}" IsEnabled="{Binding CanPlayNext}" ToolTip="下一首">
+                            <iconPacks:PackIconLucide Kind="SkipForward" Width="15" Height="15" />
+                        </Button>
+                    </StackPanel>
+                    <Grid Grid.Column="2" Margin="20,0">
+                        <Grid.RowDefinitions><RowDefinition Height="*" /><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
+                        <Slider Grid.Row="1" Minimum="0" Maximum="{Binding DurationMilliseconds}" Value="{Binding SeekPosition, Mode=TwoWay}"
+                                IsEnabled="{Binding HasMidi}" ToolTip="拖动以跳转播放位置"
+                                PreviewMouseLeftButtonDown="OnTimelineSeekStarted"
+                                PreviewMouseLeftButtonUp="OnTimelineSeekReleased" />
+                    </Grid>
+                    <TextBlock Grid.Column="3" FontFamily="Consolas" FontSize="12">
+                        <Run Text="{Binding ElapsedText}" /><Run Text="  /  " Foreground="{DynamicResource Brush.Text.Secondary}" /><Run Text="{Binding DurationText}" Foreground="{DynamicResource Brush.Text.Secondary}" />
+                    </TextBlock>
+                    <Grid Grid.Column="4" Margin="14,0,0,0" VerticalAlignment="Center">
+                        <Button Command="{Binding ToggleQueueCommand}" ToolTip="播放队列">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource IconButton}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsQueueOpen}" Value="True">
+                                            <Setter Property="Foreground" Value="{DynamicResource Brush.Accent.Primary}" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                            <iconPacks:PackIconLucide Kind="ListMusic" Width="16" Height="16" />
+                        </Button>
+                        <Border IsHitTestVisible="False" Margin="22,-4,0,0" HorizontalAlignment="Left" VerticalAlignment="Top" CornerRadius="7" MinWidth="14" Background="{DynamicResource Brush.Accent.Primary}" Padding="4,1">
+                            <Border.Style>
+                                <Style TargetType="Border">
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding QueueCount}" Value="0">
                                             <Setter Property="Visibility" Value="Collapsed" />
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
-                            </TextBlock.Style>
-                        </TextBlock>
-                    </Border>
+                            </Border.Style>
+                            <TextBlock FontSize="9" FontWeight="SemiBold" Foreground="White" HorizontalAlignment="Center" Text="{Binding QueueCount}" />
+                        </Border>
+                    </Grid>
                 </Grid>
-            </Grid>
-        </Border>
-
+            </ContentControl>
+        </Grid>
     </Grid>
 </Window>

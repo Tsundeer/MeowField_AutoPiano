@@ -139,9 +139,26 @@
         </Setter>
     </Style>
     <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-        <Setter Property="Background" Value="{DynamicResource Brush.Accent.Primary}" />
-        <Setter Property="BorderBrush" Value="{DynamicResource Brush.Accent.Primary}" />
+        <Setter Property="Background" Value="{DynamicResource Brush.Accent.Gradient}" />
+        <Setter Property="BorderBrush" Value="Transparent" />
         <Setter Property="Foreground" Value="White" />
+        <Setter Property="Effect">
+            <Setter.Value>
+                <DropShadowEffect Color="#2E6FFF" BlurRadius="18" ShadowDepth="3" Direction="270" Opacity="0.35" />
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Opacity" Value="0.92" />
+            </Trigger>
+            <Trigger Property="IsPressed" Value="True">
+                <Setter Property="Opacity" Value="0.8" />
+            </Trigger>
+            <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Opacity" Value="0.45" />
+                <Setter Property="Effect" Value="{x:Null}" />
+            </Trigger>
+        </Style.Triggers>
     </Style>
     <Style x:Key="IconButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
         <Setter Property="Width" Value="32" /><Setter Property="Padding" Value="6" /><Setter Property="HorizontalContentAlignment" Value="Center" />
@@ -156,19 +173,80 @@
     </Style>
     <Style x:Key="NavButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
         <Setter Property="Height" Value="40" /><Setter Property="HorizontalContentAlignment" Value="Left" />
+        <Setter Property="FontSize" Value="14" />
         <Setter Property="Padding" Value="14,0" /><Setter Property="BorderThickness" Value="0" /><Setter Property="Background" Value="Transparent" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Border" Padding="{TemplateBinding Padding}" Background="{TemplateBinding Background}" CornerRadius="10">
+                        <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Border" Property="Background" Value="{DynamicResource Brush.Surface.Subtle}" /></Trigger>
+                        <Trigger Property="Tag" Value="True"><Setter TargetName="Border" Property="Background" Value="{DynamicResource Brush.Accent.Soft}" /></Trigger>
+                        <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.42" /></Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
         <Style.Triggers>
             <Trigger Property="Tag" Value="True">
-                <Setter Property="Background" Value="{DynamicResource Brush.Accent.Soft}" />
                 <Setter Property="Foreground" Value="{DynamicResource Brush.Accent.Primary}" />
+                <Setter Property="FontWeight" Value="SemiBold" />
             </Trigger>
         </Style.Triggers>
     </Style>
     <Style x:Key="NavButtonActive" TargetType="Button" BasedOn="{StaticResource NavButton}">
         <Setter Property="Background" Value="{DynamicResource Brush.Accent.Soft}" /><Setter Property="Foreground" Value="{DynamicResource Brush.Accent.Primary}" />
     </Style>
+    <BlurEffect x:Key="FrostedBlur" Radius="42" />
+    <Style x:Key="GlassCard" TargetType="ContentControl">
+        <Setter Property="Padding" Value="16" />
+        <Setter Property="Focusable" Value="False" />
+        <Setter Property="IsTabStop" Value="False" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="VerticalContentAlignment" Value="Stretch" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ContentControl">
+                    <Grid>
+                        <Border CornerRadius="16" Background="{DynamicResource Brush.Surface.Card}" IsHitTestVisible="False">
+                            <Border.Effect>
+                                <DropShadowEffect Color="#4A6FB8" BlurRadius="28" ShadowDepth="6" Direction="270" Opacity="0.16" RenderingBias="Performance" />
+                            </Border.Effect>
+                        </Border>
+                        <Border CornerRadius="16" BorderThickness="1" BorderBrush="{DynamicResource Brush.Border.Glass}" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+                        </Border>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+<Style x:Key="CardTitle" TargetType="TextBlock">
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Primary}" />
+    </Style>
+    <Style x:Key="CardBorder" TargetType="Border">
+        <Setter Property="Background" Value="{DynamicResource Brush.Surface.Card}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Glass}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="11" />
+        <Setter Property="Padding" Value="16" />
+        <Setter Property="Effect">
+            <Setter.Value>
+                <DropShadowEffect Color="#4A6FB8" BlurRadius="20" ShadowDepth="5" Direction="270" Opacity="0.22" />
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style x:Key="CardTexture" TargetType="Rectangle">
+        <Setter Property="Fill" Value="{DynamicResource Brush.Card.Texture}" />
+        <Setter Property="IsHitTestVisible" Value="False" />
+    </Style>
     <Style TargetType="ComboBox">
-        <Setter Property="Height" Value="36" /><Setter Property="Padding" Value="10,4" />
+        <Setter Property="Height" Value="38" /><Setter Property="Padding" Value="10,4" />
+        <Setter Property="FontSize" Value="14" /><Setter Property="VerticalContentAlignment" Value="Center" />
         <Setter Property="BorderThickness" Value="1" />
         <Setter Property="Background" Value="{DynamicResource Brush.Surface.Panel}" /><Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Default}" /><Setter Property="Foreground" Value="{DynamicResource Brush.Text.Primary}" />
         <Setter Property="Template">
@@ -186,11 +264,11 @@
                             </Grid>
                         </Border>
                         <Popup x:Name="PART_Popup" AllowsTransparency="True" IsOpen="{TemplateBinding IsDropDownOpen}" Placement="Bottom" PopupAnimation="Fade">
-                            <Border MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}" Margin="0,4,0,0" Padding="4" Background="{DynamicResource Brush.Surface.Panel}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1" CornerRadius="8">
+                            <Border MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}" Margin="0,4,0,0" Padding="4" Background="{DynamicResource Brush.Surface.Popup}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1" CornerRadius="8">
                                 <Border.Effect>
                                     <DropShadowEffect BlurRadius="16" ShadowDepth="3" Direction="270" Opacity="0.16" />
                                 </Border.Effect>
-                                <ScrollViewer MaxHeight="280" CanContentScroll="True"><ItemsPresenter /></ScrollViewer>
+                                <ScrollViewer MaxHeight="280" CanContentScroll="True" HorizontalScrollBarVisibility="Disabled"><ItemsPresenter /></ScrollViewer>
                             </Border>
                         </Popup>
                     </Grid>
@@ -230,13 +308,14 @@
         </Setter>
     </Style>
     <Style TargetType="TextBox">
-        <Setter Property="Height" Value="36" /><Setter Property="Padding" Value="10,6" />
+        <Setter Property="Height" Value="40" /><Setter Property="Padding" Value="12,7" />
+        <Setter Property="FontSize" Value="14" /><Setter Property="VerticalContentAlignment" Value="Center" />
         <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Primary}" /><Setter Property="Background" Value="{DynamicResource Brush.Surface.Panel}" /><Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Default}" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="TextBox">
-                    <Border x:Name="Surface" Padding="{TemplateBinding Padding}" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" CornerRadius="7">
-                        <ScrollViewer x:Name="PART_ContentHost" />
+                    <Border x:Name="Surface" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" CornerRadius="7">
+                        <ScrollViewer x:Name="PART_ContentHost" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Disabled" />
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Surface" Property="BorderBrush" Value="{DynamicResource Brush.Accent.Primary}" /></Trigger>

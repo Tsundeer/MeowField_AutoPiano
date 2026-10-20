@@ -2,7 +2,7 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks">
-    <Border Background="{DynamicResource Brush.Surface.Panel}">
+    <Border Background="{DynamicResource Brush.Surface.Popup}">
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />

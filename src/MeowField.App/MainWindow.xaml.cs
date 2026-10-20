@@ -59,7 +59,6 @@ public partial class MainWindow : Window
         if (open)
         {
             EnsureDrawerWindow();
-            // 抽屉是独立窗口，不在主窗口视觉树里，语言切换不会自动覆盖到它，打开前补一次。
             LocalizationService.Apply(_drawerView!, _viewModel.IsEnglish);
             UpdateDrawerPlacement(force: true);
             _drawer!.Show();
@@ -101,8 +100,6 @@ public partial class MainWindow : Window
         var host = new Grid { Margin = new Thickness(DrawerShadowRoom, 0, 0, 0) };
         host.RenderTransform = _drawerTransform;
         host.Children.Add(_drawerView);
-        // 用 owned 无边框窗口而不是 Popup：owned 窗口会跟随主窗口的 z 序被遮挡，
-        // 主窗口最小化时也随之隐藏。窗口 = 8px 阴影行程 + 336px 面板 + 96px 滑入行程。
         _drawer = new Window
         {
             Title = "MeowField 播放队列",
@@ -132,6 +129,10 @@ public partial class MainWindow : Window
 
     private void OnWindowStateChanged(object? sender, EventArgs e)
     {
+        ShellGrid.Margin = WindowState == WindowState.Maximized
+            ? new Thickness(8)
+            : new Thickness(16, 14, 16, 20);
+
         if (_drawer is null) return;
         if (WindowState == WindowState.Minimized)
         {
@@ -139,7 +140,6 @@ public partial class MainWindow : Window
         }
         else if (_viewModel.IsQueueOpen)
         {
-            // 从最小化还原后必须强制重定位，否则会显示在旧状态的位置上。
             UpdateDrawerPlacement(force: true);
             _drawer.Show();
         }
@@ -182,6 +182,14 @@ public partial class MainWindow : Window
         }
     }
 
+    private void OnRootMouseDown(object sender, MouseButtonEventArgs e)
+    {
+        if (ReferenceEquals(e.OriginalSource, RootGrid) || ReferenceEquals(e.OriginalSource, ShellGrid))
+        {
+            OnTitleBarMouseDown(sender, e);
+        }
+    }
+
     private void OnMinimizeClick(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
 
     private void OnMaximizeClick(object sender, RoutedEventArgs e) => WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
@@ -201,8 +209,64 @@ public partial class MainWindow : Window
 
     private IntPtr WndProc(IntPtr hwnd, int message, IntPtr wParam, IntPtr lParam, ref bool handled)
     {
+        if (message == WmGetMinMaxInfo)
+        {
+            ClampMaximizedToWorkArea(hwnd, lParam);
+            return IntPtr.Zero;
+        }
+
         handled = _hotkeys.HandleWindowMessage(message, wParam);
         return IntPtr.Zero;
+    }
+
+    private const int WmGetMinMaxInfo = 0x0024;
+    private const uint MonitorDefaultToNearest = 0x00000002;
+
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+    private struct NativePoint { public int X; public int Y; }
+
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+    private struct NativeRect { public int Left; public int Top; public int Right; public int Bottom; }
+
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+    private struct MinMaxInfo
+    {
+        public NativePoint Reserved;
+        public NativePoint MaxSize;
+        public NativePoint MaxPosition;
+        public NativePoint MinTrackSize;
+        public NativePoint MaxTrackSize;
+    }
+
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+    private struct MonitorInfo
+    {
+        public int Size;
+        public NativeRect Monitor;
+        public NativeRect Work;
+        public uint Flags;
+    }
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern IntPtr MonitorFromWindow(IntPtr hwnd, uint flags);
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
+    private static extern bool GetMonitorInfo(IntPtr monitor, ref MonitorInfo info);
+
+    private static void ClampMaximizedToWorkArea(IntPtr hwnd, IntPtr lParam)
+    {
+        var monitor = MonitorFromWindow(hwnd, MonitorDefaultToNearest);
+        if (monitor == IntPtr.Zero) return;
+        var info = new MonitorInfo { Size = System.Runtime.InteropServices.Marshal.SizeOf<MonitorInfo>() };
+        if (!GetMonitorInfo(monitor, ref info)) return;
+
+        var minMax = System.Runtime.InteropServices.Marshal.PtrToStructure<MinMaxInfo>(lParam);
+        minMax.MaxPosition.X = info.Work.Left - info.Monitor.Left;
+        minMax.MaxPosition.Y = info.Work.Top - info.Monitor.Top;
+        minMax.MaxSize.X = info.Work.Right - info.Work.Left;
+        minMax.MaxSize.Y = info.Work.Bottom - info.Work.Top;
+        System.Runtime.InteropServices.Marshal.StructureToPtr(minMax, lParam, false);
     }
 
     private void OnClosed(object? sender, EventArgs e)
