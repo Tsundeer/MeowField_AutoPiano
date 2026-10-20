@@ -48,7 +48,7 @@ public partial class MainWindow : Window
         {
             AnimateQueueDrawer(_viewModel.IsQueueOpen);
         }
-        else if (e.PropertyName == nameof(MainViewModel.IsEnglish) && _drawer is { IsVisible: true })
+        else if (e.PropertyName == nameof(MainViewModel.IsEnglish) && _drawer is { IsVisible: true } && _drawerView is not null)
         {
             LocalizationService.Apply(_drawerView, _viewModel.IsEnglish);
         }

@@ -137,3 +137,34 @@ public interface ILegacyDataImporter
 {
     Task<LegacyImportResult> ImportIfNeededAsync(CancellationToken cancellationToken = default);
 }
+
+/// <summary>在线曲库中的一首曲目，来自远端目录索引。</summary>
+public sealed record RemoteLibraryTrack(
+    string Id,
+    string Name,
+    string Category,
+    string Path,
+    string Sha256,
+    long Bytes);
+
+/// <summary>
+/// 目录加载结果。<see cref="FromCache"/> 为真表示所有镜像都没连上，
+/// 当前列表来自上一次成功拉取后写入本地的缓存。
+/// </summary>
+public sealed record RemoteLibraryCatalog(
+    IReadOnlyList<RemoteLibraryTrack> Tracks,
+    bool FromCache,
+    string SourceName);
+
+public interface IRemoteLibraryClient
+{
+    Task<RemoteLibraryCatalog> LoadCatalogAsync(bool forceRefresh, CancellationToken cancellationToken = default);
+    Task<byte[]> DownloadTrackAsync(RemoteLibraryTrack track, CancellationToken cancellationToken = default);
+}
+
+/// <summary>面向用户的在线曲库失败，消息已是可直接展示的中文文案。</summary>
+public sealed class RemoteLibraryException(string userMessage, Exception? innerException = null)
+    : Exception(userMessage, innerException)
+{
+    public string UserMessage { get; } = userMessage;
+}

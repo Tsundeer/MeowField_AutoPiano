@@ -4,6 +4,7 @@
     <ProjectReference Include="..\MeowField.Application\MeowField.Application.csproj" />
     <ProjectReference Include="..\MeowField.Domain\MeowField.Domain.csproj" />
     <ProjectReference Include="..\MeowField.Infrastructure.Midi\MeowField.Infrastructure.Midi.csproj" />
+    <ProjectReference Include="..\MeowField.Infrastructure.Network\MeowField.Infrastructure.Network.csproj" />
     <ProjectReference Include="..\MeowField.Infrastructure.Windows\MeowField.Infrastructure.Windows.csproj" />
     <ProjectReference Include="..\MeowField.Infrastructure.Storage\MeowField.Infrastructure.Storage.csproj" />
     <ProjectReference Include="..\MeowField.Infrastructure.Audio\MeowField.Infrastructure.Audio.csproj" />
@@ -37,7 +38,7 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets\MeowField_AutoPiano.ico</ApplicationIcon>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
-    <Version>2.2.26</Version>
+    <Version>2.2.27</Version>
     <AssemblyName>MeowField_AutoPiano</AssemblyName>
     <StartupObject>MeowField.App.Program</StartupObject>
     <SatelliteResourceLanguages>zh-Hans</SatelliteResourceLanguages>

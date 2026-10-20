@@ -4,11 +4,13 @@ using System.Diagnostics;
 using System.Security.Principal;
 using MeowField.Application;
 using MeowField.Infrastructure.Midi;
+using MeowField.Infrastructure.Network;
 using MeowField.Infrastructure.Audio;
 using MeowField.Infrastructure.Storage;
 using MeowField.Infrastructure.Windows;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Serilog;
 using System.Windows.Threading;
 
@@ -67,6 +69,10 @@ public partial class App : System.Windows.Application
                     services.AddSingleton<IUserDataStore, FileSystemUserDataStore>();
                     services.AddSingleton<IGameProfileProvider>(_ => new GameProfileProvider(Path.Combine(AppContext.BaseDirectory, "game_configs")));
                     services.AddSingleton<ILibraryService, MidiLibraryService>();
+                    services.AddSingleton<IRemoteLibraryClient>(provider => new RemoteLibraryClient(
+                        LibrarySources.Default,
+                        Path.Combine(provider.GetRequiredService<IUserDataStore>().DataDirectory, "cache"),
+                        provider.GetService<ILogger<RemoteLibraryClient>>()));
                     services.AddSingleton<IAudioConverter, PianoTransAudioConverter>();
                     services.AddSingleton<INtpService, NtpService>();
                     services.AddSingleton<IGlobalHotkeyService, GlobalHotkeyService>();
