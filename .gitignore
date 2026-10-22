@@ -72,3 +72,6 @@ htmlcov/
 .env
 .env.local
 .workbuddy/
+
+# 内部规划文档，含其他项目的内部路径，不进入公开仓库（本地保留）
+docs/REFACTOR_PLAN.md
