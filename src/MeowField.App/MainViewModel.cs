@@ -255,7 +255,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
             OnPropertyChanged(nameof(EventCountLabel));
             DurationText = FormatTime(_playback.Snapshot.DurationMs);
             DurationMilliseconds = _playback.Snapshot.DurationMs;
-            StatusText = $"已载入 {NoteCount:N0} 个音符";
+            StatusText = PlaybackEventBuilder.RequiresDrumChannelFallback(midi.Notes, config)
+                ? $"已载入 {NoteCount:N0} 个音符（未检测到第 {(config.MidiChannelFilter ?? 0) + 1} 通道，鼓谱已按全通道播放）"
+                : $"已载入 {NoteCount:N0} 个音符";
             OnPropertyChanged(nameof(HasMidi));
         }
         catch (Exception exception)

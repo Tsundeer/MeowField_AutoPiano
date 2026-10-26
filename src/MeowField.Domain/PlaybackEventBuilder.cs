@@ -29,12 +29,11 @@ public static class PlaybackEventBuilder
 
     private static IReadOnlyList<PlayEvent> BuildDrumEvents(IReadOnlyList<MidiNote> notes, MappingConfig config)
     {
-        var events = notes
-            .Where(note => config.MidiChannelFilter is null || note.Channel == config.MidiChannelFilter)
+        var events = SelectDrumNotes(notes, config)
             .Select(Scale(config.Speed))
             .SelectMany(note =>
             {
-                var key = (config.CustomKeyMap ?? NoteMapping.DrumKeys).GetValueOrDefault(note.Note);
+                var key = ResolveDrumKey(config.CustomKeyMap, note.Note);
                 return key is null
                     ? []
                     : new[]
@@ -45,6 +44,44 @@ public static class PlaybackEventBuilder
             });
 
         return Sort(events);
+    }
+
+    /// <summary>
+    /// 鼓谱并不总落在 GM 打击乐通道上 —— 例如 EZDrummer 导出的文件会把鼓写在通道 0。
+    /// 严格过滤会让整首曲子一个键都不发，因此只有该通道确实有音符时才启用过滤。
+    /// </summary>
+    public static bool RequiresDrumChannelFallback(IReadOnlyList<MidiNote> notes, MappingConfig config)
+    {
+        ArgumentNullException.ThrowIfNull(notes);
+        ArgumentNullException.ThrowIfNull(config);
+        return config.Instrument == InstrumentKind.Drums
+            && config.MidiChannelFilter is { } channel
+            && notes.Count > 0
+            && !notes.Any(note => note.Channel == channel);
+    }
+
+    private static IReadOnlyList<MidiNote> SelectDrumNotes(IReadOnlyList<MidiNote> notes, MappingConfig config)
+    {
+        if (config.MidiChannelFilter is not { } channel || RequiresDrumChannelFallback(notes, config))
+        {
+            return notes;
+        }
+
+        return notes.Where(note => note.Channel == channel).ToArray();
+    }
+
+    /// <summary>
+    /// profile 的 custom_key_map 通常只列常用音高，未列出的音高继续使用内置 GM 鼓表；
+    /// 否则整类鼓声（通鼓、镲、拉丁打击乐）会被静默丢弃。显式配置为空串表示禁用该音高。
+    /// </summary>
+    private static string? ResolveDrumKey(IReadOnlyDictionary<int, string>? customKeyMap, int note)
+    {
+        if (customKeyMap is not null && customKeyMap.TryGetValue(note, out var custom))
+        {
+            return string.IsNullOrWhiteSpace(custom) ? null : custom;
+        }
+
+        return NoteMapping.DrumKeys.GetValueOrDefault(note);
     }
 
     private static IReadOnlyList<PlayEvent> BuildClusteredEvents(

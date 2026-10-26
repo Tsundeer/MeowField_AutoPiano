@@ -188,6 +188,82 @@ public sealed class PlaybackEventBuilderTests
     }
 
     [Fact]
+    public void Drums_FallBackToAllChannels_WhenFilteredChannelHasNoNotes()
+    {
+        // EZDrummer 一类导出会把鼓写在通道 0。严格按通道 9 过滤会构建出 0 个按键，
+        // 用户看到的现象就是「架子鼓完全没反应」。
+        MidiNote[] notes =
+        [
+            new(0, 100, 36, 100, 0, 0),
+            new(100, 200, 38, 100, 0, 0),
+            new(200, 300, 42, 100, 0, 0),
+        ];
+        var config = new MappingConfig { Instrument = InstrumentKind.Drums, MidiChannelFilter = 9 };
+
+        var events = PlaybackEventBuilder.Build(notes, config);
+
+        Assert.Equal(3, events.Count(item => item.Type == PlayEventType.Down));
+        Assert.Equal(["E", "W", "1"], events.Where(item => item.Type == PlayEventType.Down).Select(item => item.Key).ToArray());
+        Assert.True(PlaybackEventBuilder.RequiresDrumChannelFallback(notes, config));
+    }
+
+    [Fact]
+    public void Drums_KeepStrictChannelFilter_WhenFilteredChannelHasNotes()
+    {
+        MidiNote[] notes =
+        [
+            new(0, 100, 36, 100, 9, 0),
+            new(0, 100, 60, 100, 0, 0),
+        ];
+        var config = new MappingConfig { Instrument = InstrumentKind.Drums, MidiChannelFilter = 9 };
+
+        var events = PlaybackEventBuilder.Build(notes, config);
+
+        Assert.Equal(2, events.Count);
+        Assert.All(events, item => Assert.Equal("E", item.Key));
+        Assert.False(PlaybackEventBuilder.RequiresDrumChannelFallback(notes, config));
+    }
+
+    [Fact]
+    public void Drums_CustomMapMergesWithBuiltInVoices()
+    {
+        // profile 只列 10 个常用音高；未列出的音高必须继续走内置 GM 鼓表，
+        // 否则通鼓、镲、拉丁打击乐会被整类丢弃。
+        MidiNote[] notes =
+        [
+            new(0, 100, 48, 100, 9, 0),  // 由 custom_map 覆盖
+            new(100, 200, 38, 100, 9, 0), // 未列出，回落到内置表（W）
+            new(200, 300, 73, 100, 9, 0), // 未列出，回落到内置表（T）
+        ];
+        var config = new MappingConfig
+        {
+            Instrument = InstrumentKind.Drums,
+            MidiChannelFilter = 9,
+            CustomKeyMap = new Dictionary<int, string> { [48] = "K" },
+        };
+
+        var events = PlaybackEventBuilder.Build(notes, config);
+
+        Assert.Equal(["K", "W", "T"], events.Where(item => item.Type == PlayEventType.Down).Select(item => item.Key).ToArray());
+    }
+
+    [Fact]
+    public void Drums_CustomMapCanSilenceAVoice()
+    {
+        MidiNote[] notes = [new(0, 100, 38, 100, 9, 0), new(100, 200, 36, 100, 9, 0)];
+        var config = new MappingConfig
+        {
+            Instrument = InstrumentKind.Drums,
+            MidiChannelFilter = 9,
+            CustomKeyMap = new Dictionary<int, string> { [38] = "" },
+        };
+
+        var events = PlaybackEventBuilder.Build(notes, config);
+
+        Assert.Equal(["E", "E"], events.Select(item => item.Key).ToArray());
+    }
+
+    [Fact]
     public void Speed_ScalesStartAndGuaranteesMinimumPhysicalHold()
     {
         MidiNote[] notes = [new(9, 10, 60, 100, 0, 0)];
